@@ -36,7 +36,3 @@
 | 共享/导入                                                     | B站                                                    |
 | --------------------------------------------------------- | ----------------------------------------------------- |
 | <img src="screenshots/share.jpeg" width="240" alt="共享" /> | <img src="screenshots/b.jpeg" width="240" alt="B站" /> |
-
-<p>
-  <img src="screenshots/wechat.jpg" width="260" alt="微信打赏码" />
-</p>
