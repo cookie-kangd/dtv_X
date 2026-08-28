@@ -107,7 +107,8 @@ class SubscriptionStoreAndroid(
     prefs.edit().putString("simple_mode_by_platform", raw).apply()
   }
 
-  override fun loadRememberCategoryEnabled(): Boolean = prefs.getBoolean("remember_category_enabled", false)
+  // 「记住栏目」默认开启：首次安装即为开启状态
+  override fun loadRememberCategoryEnabled(): Boolean = prefs.getBoolean("remember_category_enabled", true)
 
   override fun saveRememberCategoryEnabled(value: Boolean) {
     prefs.edit().putBoolean("remember_category_enabled", value).apply()

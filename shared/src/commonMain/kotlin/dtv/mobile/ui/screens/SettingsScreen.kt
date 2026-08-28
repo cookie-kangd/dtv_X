@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -46,9 +48,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dtv.mobile.state.AppState
+import dtv.mobile.state.ThemeMode
 import dtv.mobile.ui.system.PlatformBackHandler
 
-private enum class SettingsSection { Root, Basic }
+private enum class SettingsSection { Root, Basic, Sync }
 
 private val PresetAccentColors = listOf(
   "默认" to "",
@@ -79,9 +82,15 @@ fun SettingsScreen(
   when (section) {
     SettingsSection.Root -> SettingsRoot(
       onOpenBasic = { section = SettingsSection.Basic },
+      onOpenSync = { section = SettingsSection.Sync },
       modifier = modifier.fillMaxSize(),
     )
     SettingsSection.Basic -> BasicSettingsSection(
+      appState = appState,
+      onBack = { section = SettingsSection.Root },
+      modifier = modifier.fillMaxSize(),
+    )
+    SettingsSection.Sync -> SyncSettingsSection(
       appState = appState,
       onBack = { section = SettingsSection.Root },
       modifier = modifier.fillMaxSize(),
@@ -92,6 +101,7 @@ fun SettingsScreen(
 @Composable
 private fun SettingsRoot(
   onOpenBasic: () -> Unit,
+  onOpenSync: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   Column(
@@ -100,15 +110,14 @@ private fun SettingsRoot(
     SettingsItemRow(
       icon = { Icon(imageVector = Icons.Default.Settings, contentDescription = null) },
       title = "基本设置",
-      subtitle = "记住栏目、全局颜色",
+      subtitle = "记住栏目、主题模式、全局颜色",
       onClick = onOpenBasic,
     )
-    Spacer(modifier = Modifier.height(16.dp))
-    Text(
-      text = "更多设置项持续补充中…",
-      style = MaterialTheme.typography.bodySmall,
-      color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-      modifier = Modifier.padding(horizontal = 18.dp),
+    SettingsItemRow(
+      icon = { Icon(imageVector = Icons.Default.Devices, contentDescription = null) },
+      title = "数据同步",
+      subtitle = "局域网共享 / 导入关注、分区与屏蔽词",
+      onClick = onOpenSync,
     )
   }
 }
@@ -173,6 +182,36 @@ private fun SettingsItemRow(
 }
 
 @Composable
+private fun SettingsSectionHeader(
+  title: String,
+  onBack: () -> Unit,
+) {
+  Row(verticalAlignment = Alignment.CenterVertically) {
+    IconButton(onClick = onBack) {
+      Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+    }
+    Text(title, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black))
+  }
+}
+
+@Composable
+private fun SettingsCard(
+  modifier: Modifier = Modifier,
+  content: @Composable ColumnScope.() -> Unit,
+) {
+  Surface(
+    modifier = modifier.fillMaxWidth(),
+    shape = RoundedCornerShape(16.dp),
+    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)),
+    tonalElevation = 0.dp,
+    shadowElevation = 0.dp,
+  ) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp), content = content)
+  }
+}
+
+@Composable
 private fun BasicSettingsSection(
   appState: AppState,
   onBack: () -> Unit,
@@ -184,80 +223,135 @@ private fun BasicSettingsSection(
       .padding(horizontal = 18.dp, vertical = 6.dp),
     verticalArrangement = Arrangement.spacedBy(10.dp),
   ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-      IconButton(onClick = onBack) {
-        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-      }
-      Text("基本设置", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black))
-    }
+    SettingsSectionHeader(title = "基本设置", onBack = onBack)
 
-    // 记住栏目
-    Surface(
-      modifier = Modifier.fillMaxWidth(),
-      shape = RoundedCornerShape(16.dp),
-      color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-      border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)),
-      tonalElevation = 0.dp,
-      shadowElevation = 0.dp,
-    ) {
-      Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-        Row(
-          modifier = Modifier.fillMaxWidth(),
-          verticalAlignment = Alignment.CenterVertically,
-        ) {
-          Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text("记住栏目", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
-            Text(
-              text = "勾选后，在斗鱼、虎牙、抖音、B站切换栏目（如网游竞技、单机热游）时会自动记住；再次打开该平台时恢复上次选择的栏目。",
-              style = MaterialTheme.typography.bodySmall,
-              color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-            )
-          }
-          Switch(
-            checked = appState.rememberCategoryEnabled,
-            onCheckedChange = appState::updateRememberCategoryEnabled,
+    // 记住栏目（默认开启）
+    SettingsCard {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+          Text("记住栏目", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+          Text(
+            text = "在斗鱼、虎牙、抖音、B站切换栏目（如网游竞技、单机热游）时自动记住，再次打开该平台时恢复上次选择的栏目。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
           )
         }
+        Switch(
+          checked = appState.rememberCategoryEnabled,
+          onCheckedChange = appState::updateRememberCategoryEnabled,
+        )
       }
     }
 
-    Spacer(modifier = Modifier.height(4.dp))
+    // 主题模式（亮色 / 暗色 / 跟随系统）
+    SettingsCard {
+      Text("主题模式", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+      Spacer(modifier = Modifier.height(2.dp))
+      Text(
+        text = "选择浅色、深色或跟随系统。",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+      )
+      Spacer(modifier = Modifier.height(10.dp))
+      ThemeModeSelector(
+        selected = appState.themeMode,
+        onSelect = appState::updateThemeMode,
+      )
+    }
 
     // 全局颜色
-    Surface(
-      modifier = Modifier.fillMaxWidth(),
-      shape = RoundedCornerShape(16.dp),
-      color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-      border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)),
-      tonalElevation = 0.dp,
-      shadowElevation = 0.dp,
-    ) {
-      Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          Icon(
-            imageVector = Icons.Default.Palette,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-          )
-          Text("全局颜色", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
-        }
-        Text(
-          text = "自定义主题强调色，会应用到选中栏目高亮、弹幕昵称颜色等位置。",
-          style = MaterialTheme.typography.bodySmall,
-          color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+    SettingsCard {
+      Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(
+          imageVector = Icons.Default.Palette,
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.primary,
         )
-        Spacer(modifier = Modifier.height(10.dp))
-        AccentColorPalette(
-          selectedHex = appState.accentColorHex,
-          onSelect = { hex -> appState.setAccentColor(hex) },
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          TextButton(onClick = { appState.setAccentColor("") }) {
-            Text("恢复默认颜色")
-          }
+        Text("全局颜色", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+      }
+      Text(
+        text = "自定义主题强调色，会应用到选中栏目高亮、弹幕昵称颜色等位置。",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+      )
+      Spacer(modifier = Modifier.height(10.dp))
+      AccentColorPalette(
+        selectedHex = appState.accentColorHex,
+        onSelect = { hex -> appState.setAccentColor(hex) },
+      )
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        TextButton(onClick = { appState.setAccentColor("") }) {
+          Text("恢复默认颜色")
         }
       }
     }
+  }
+}
+
+@Composable
+private fun ThemeModeSelector(
+  selected: ThemeMode,
+  onSelect: (ThemeMode) -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  val options = listOf(
+    ThemeMode.System to "跟随系统",
+    ThemeMode.Light to "亮色",
+    ThemeMode.Dark to "暗色",
+  )
+  Row(
+    modifier = modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(12.dp))
+      .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+      .padding(4.dp),
+    horizontalArrangement = Arrangement.spacedBy(4.dp),
+  ) {
+    options.forEach { (mode, label) ->
+      val isSelected = mode == selected
+      Box(
+        modifier = Modifier
+          .weight(1f)
+          .clip(RoundedCornerShape(9.dp))
+          .background(
+            if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+          )
+          .clickable { onSelect(mode) }
+          .padding(vertical = 9.dp),
+        contentAlignment = Alignment.Center,
+      ) {
+        Text(
+          text = label,
+          style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+          color = if (isSelected) Color.Black else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+          maxLines = 1,
+        )
+      }
+    }
+  }
+}
+
+@Composable
+private fun SyncSettingsSection(
+  appState: AppState,
+  onBack: () -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  Column(
+    modifier = modifier
+      .fillMaxSize()
+      .padding(horizontal = 18.dp, vertical = 6.dp),
+    verticalArrangement = Arrangement.spacedBy(10.dp),
+  ) {
+    SettingsSectionHeader(title = "数据同步", onBack = onBack)
+    // 功能与原「首页 → 数据同步」完全一致，仅入口位置调整到设置内
+    SyncScreen(
+      appState = appState,
+      modifier = Modifier.fillMaxSize(),
+    )
   }
 }
 
@@ -279,6 +373,7 @@ private fun AccentColorPalette(
       val isSelected = normalized == selectedNormalized && selectedNormalized.isNotEmpty()
       val isDefault = hex.isEmpty()
       val isDefaultSelected = selectedNormalized.isEmpty()
+      val active = isSelected || (isDefault && isDefaultSelected)
       Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -287,12 +382,8 @@ private fun AccentColorPalette(
           modifier = Modifier
             .size(44.dp)
             .clip(CircleShape)
-            .then(
-              if (isSelected || (isDefault && isDefaultSelected)) {
-                Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f))
-              } else {
-                Modifier.background(Color.Transparent)
-              },
+            .background(
+              if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f) else Color.Transparent,
             )
             .padding(4.dp),
           contentAlignment = Alignment.Center,
@@ -309,7 +400,7 @@ private fun AccentColorPalette(
             shadowElevation = 0.dp,
           ) {
             Box(contentAlignment = Alignment.Center) {
-              if (isSelected || (isDefault && isDefaultSelected)) {
+              if (active) {
                 Icon(
                   imageVector = Icons.Default.Check,
                   contentDescription = null,
@@ -323,8 +414,8 @@ private fun AccentColorPalette(
         Text(
           text = label,
           style = MaterialTheme.typography.labelSmall,
-          color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isSelected || (isDefault && isDefaultSelected)) 0.9f else 0.55f),
-          fontWeight = if (isSelected || (isDefault && isDefaultSelected)) FontWeight.Bold else FontWeight.Medium,
+          color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (active) 0.9f else 0.55f),
+          fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
         )
       }
     }

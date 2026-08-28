@@ -73,8 +73,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          VERSION="0.2.0"
-          TAG="v${VERSION}-${{ github.run_number }}"
+          VERSION="0.1"
+          TAG="v${VERSION}"
+          # 同名 release 已存在时先删除，保证 tag 始终指向最新一次构建的 APK
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "existing release $TAG found, replacing it"
+            gh release delete "$TAG" --yes
+          fi
           {
             echo "## DTV Mobile 更新说明"
             echo ""
@@ -82,6 +87,6 @@ jobs:
           } > release_body.md
           gh release create "$TAG" \
             "${{ steps.apk.outputs.apk_path }}" \
-            --title "DTV Mobile v${VERSION} (Run #${{ github.run_number }})" \
+            --title "DTV Mobile v${VERSION}" \
             --notes-file release_body.md \
             || echo "::warning::Release creation skipped (tag may already exist)"

@@ -1,5 +1,6 @@
 package dtv.mobile.ui.player
 
+import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -7,17 +8,44 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.VideoSize
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
+import androidx.media3.datasource.cache.SimpleCache
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import dtv.mobile.util.AppLog
+import java.io.File
+
+/**
+ * 应用级媒体缓存（仅用于点播/回放，直播不使用磁盘缓存以免增加延迟与磁盘占用）。
+ * 作为单例长期持有：SimpleCache 可能被多个播放器共享，不能在单个播放器释放时关闭。
+ */
+private object PlayerCacheHolder {
+  private const val MAX_CACHE_BYTES = 128L * 1024L * 1024L
+
+  private var cache: SimpleCache? = null
+
+  @Synchronized
+  fun get(context: Context): SimpleCache {
+    cache?.let { return it }
+    val dir = File(context.cacheDir, "dtv_media_cache")
+    val created = SimpleCache(dir, LeastRecentlyUsedCacheEvictor(MAX_CACHE_BYTES))
+    cache = created
+    return created
+  }
+}
 
 @Composable
 actual fun StreamPlayer(
@@ -49,14 +77,59 @@ actual fun StreamPlayer(
       .setAllowCrossProtocolRedirects(true)
       .setDefaultRequestProperties(headers)
 
+    // 直播走纯网络源（避免磁盘缓存带来的延迟与空间占用）；点播/回放启用 128MB 磁盘缓存。
+    val dataSourceFactory = if (liveMode) {
+      httpFactory
+    } else {
+      CacheDataSource.Factory()
+        .setCache(PlayerCacheHolder.get(context.applicationContext))
+        .setUpstreamDataSourceFactory(httpFactory)
+        .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+    }
+
+    // 缓冲策略：直播偏小（降低延迟、快速起播），点播偏大（抗网络抖动）。
+    val loadControl = if (liveMode) {
+      DefaultLoadControl.Builder()
+        .setBufferDurationsMs(12_000, 24_000, 1_500, 3_000)
+        .setPrioritizeTimeOverSizeThresholds(true)
+        .build()
+    } else {
+      DefaultLoadControl.Builder()
+        .setBufferDurationsMs(30_000, 60_000, 2_500, 5_000)
+        .setPrioritizeTimeOverSizeThresholds(true)
+        .build()
+    }
+
+    // 限制最大解码分辨率，避免超高码率流占用过多内存导致 OOM / 掉帧。
+    val trackSelector = DefaultTrackSelector(context).apply {
+      setParameters(buildUponParameters().setMaxVideoSize(1920, 1080))
+    }
+
     ExoPlayer.Builder(context)
-      .setMediaSourceFactory(DefaultMediaSourceFactory(context).setDataSourceFactory(httpFactory))
+      .setMediaSourceFactory(DefaultMediaSourceFactory(context).setDataSourceFactory(dataSourceFactory))
+      .setLoadControl(loadControl)
+      .setTrackSelector(trackSelector)
       .build()
       .apply {
-      setMediaItem(MediaItem.fromUri(Uri.parse(url)))
-      playWhenReady = true
-      prepare()
-    }
+        // 音频焦点：接入电话/其他媒体时自动让出，避免声音叠加
+        setAudioAttributes(
+          AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+            .build(),
+          true,
+        )
+        // 耳机断开等"噪音"场景自动暂停，避免后台继续解码耗电
+        setHandleAudioBecomingNoisy(true)
+        // 使用 GPU 友好的缩放模式，降低渲染开销
+        videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+        // 播放期间保持网络唤醒，避免息屏后被系统断流
+        setWakeMode(C.WAKE_MODE_NETWORK)
+
+        setMediaItem(MediaItem.fromUri(Uri.parse(url)))
+        playWhenReady = true
+        prepare()
+      }
   }
 
   DisposableEffect(player, url) {
@@ -155,6 +228,8 @@ actual fun StreamPlayer(
       }
     },
     onRelease = { view ->
+      // 复位屏幕常亮，避免离开播放页后系统仍保持常亮耗电
+      view.keepScreenOn = false
       // Detach the player before the view is recycled so the composable-level
       // release below is the only owner of the ExoPlayer lifecycle.
       if (view.player === player) {

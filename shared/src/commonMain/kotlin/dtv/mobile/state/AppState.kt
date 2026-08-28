@@ -29,7 +29,7 @@ class AppState(
   var danmakuFontScale: Float by mutableStateOf(1.0f)
   var danmakuOpacity: Float by mutableStateOf(1.0f)
   var danmakuAreaFraction: Float by mutableStateOf(0.5f)
-  var rememberCategoryEnabled: Boolean by mutableStateOf(false)
+  var rememberCategoryEnabled: Boolean by mutableStateOf(true)
   var accentColorHex: String by mutableStateOf("")
   var platformSwitchLoading: Boolean by mutableStateOf(false)
   var selectedPlatform: Platform by mutableStateOf(Platform.Douyu)
@@ -141,6 +141,11 @@ class AppState(
       ThemeMode.Light, ThemeMode.System -> ThemeMode.Dark
     }
     subscriptionStore.saveThemeMode(themeMode)
+  }
+
+  fun updateThemeMode(mode: ThemeMode) {
+    themeMode = mode
+    subscriptionStore.saveThemeMode(mode)
   }
 
   fun isSimpleMode(platform: Platform): Boolean = simpleModeByPlatform[platform] ?: false
@@ -317,10 +322,6 @@ class AppState(
     currentScreen = Screen.Search
   }
 
-  fun openSync() {
-    currentScreen = Screen.Sync
-  }
-
   fun openSettings() {
     settingsReturnScreen = currentScreen
     currentScreen = Screen.Settings
@@ -340,7 +341,6 @@ class AppState(
         currentScreen = searchReturnScreen ?: Screen.Home
         searchReturnScreen = null
       }
-      Screen.Sync -> currentScreen = Screen.Home
       Screen.Settings -> {
         currentScreen = settingsReturnScreen ?: Screen.Home
         settingsReturnScreen = null
@@ -351,7 +351,7 @@ class AppState(
 
 enum class ThemeMode { System, Light, Dark }
 
-enum class Screen { Home, Platform, Player, Search, Sync, Settings }
+enum class Screen { Home, Platform, Player, Search, Settings }
 
 @Composable
 fun rememberAppState(

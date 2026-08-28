@@ -68,7 +68,7 @@ object InMemorySubscriptionStore : SubscriptionStore {
   private var partitions: List<SubscribedPartition> = emptyList()
   private var danmuBlockKeywords: List<String> = emptyList()
   private var simpleModes: List<SimpleModeEntry> = emptyList()
-  private var rememberCategoryEnabled: Boolean = false
+  private var rememberCategoryEnabled: Boolean = true
   private var rememberedCategories: List<RememberedCategoryEntry> = emptyList()
   private var accentColorHex: String = ""
 

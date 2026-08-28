@@ -15,9 +15,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Devices
-import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -50,8 +47,6 @@ import dtv.mobile.ui.screens.PlatformScreen
 import dtv.mobile.ui.screens.PlayerScreen
 import dtv.mobile.ui.screens.SearchScreen
 import dtv.mobile.ui.screens.SettingsScreen
-import dtv.mobile.ui.screens.SyncScreen
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Color
 import dtv.mobile.ui.system.PlatformBackHandler
 import androidx.compose.animation.AnimatedContent
@@ -127,20 +122,6 @@ fun RootScaffold(appState: AppState) {
             ),
           )
         }
-        Screen.Sync -> {
-          CenterAlignedTopAppBar(
-            title = { Text(text = "数据同步") },
-            navigationIcon = {
-              IconButton(onClick = { appState.back() }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-              }
-            },
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-              containerColor = Color.Transparent,
-              scrolledContainerColor = Color.Transparent,
-            ),
-          )
-        }
         Screen.Settings -> {
           CenterAlignedTopAppBar(
             title = { Text(text = "设置") },
@@ -159,7 +140,6 @@ fun RootScaffold(appState: AppState) {
           HubTopBar(
             title = if (appState.currentScreen == Screen.Home) "关注列表" else appState.selectedPlatform.title,
             onSearchClick = appState::openSearch,
-            onSyncClick = appState::openSync,
             simpleMode = appState.simpleModeForSelectedPlatform,
             onSimpleModeToggle = appState::toggleSimpleModeForSelectedPlatform,
             simpleModeEnabled = simpleModeEnabled,
@@ -172,10 +152,8 @@ fun RootScaffold(appState: AppState) {
                 bilibiliLoggedIn = false
               }
             },
-            showThemeToggle = appState.currentScreen == Screen.Home,
-            onThemeToggle = appState::toggleDayNight,
             showSearch = appState.currentScreen != Screen.Home,
-            showSync = appState.currentScreen == Screen.Home,
+            showPlatformActions = appState.currentScreen == Screen.Platform,
             showSettings = appState.currentScreen == Screen.Home,
             onSettingsClick = appState::openSettings,
           )
@@ -183,7 +161,7 @@ fun RootScaffold(appState: AppState) {
       }
     },
     bottomBar = {
-      if (appState.currentScreen != Screen.Sync && !(appState.currentScreen == Screen.Player && appState.playerFullscreen)) {
+      if (!(appState.currentScreen == Screen.Player && appState.playerFullscreen)) {
         PlatformBottomBar(
           selectedScreen = appState.dockSelectedScreen,
           selectedPlatform = appState.selectedPlatform,
@@ -228,10 +206,6 @@ fun RootScaffold(appState: AppState) {
           modifier = Modifier.padding(padding),
           appState = appState,
         )
-        Screen.Sync -> SyncScreen(
-          modifier = Modifier.padding(padding),
-          appState = appState,
-        )
         Screen.Settings -> SettingsScreen(
           modifier = Modifier.padding(padding),
           appState = appState,
@@ -245,7 +219,6 @@ fun RootScaffold(appState: AppState) {
 private fun HubTopBar(
   title: String,
   onSearchClick: () -> Unit,
-  onSyncClick: () -> Unit,
   simpleMode: Boolean,
   onSimpleModeToggle: () -> Unit,
   simpleModeEnabled: Boolean,
@@ -253,15 +226,12 @@ private fun HubTopBar(
   bilibiliLoggedIn: Boolean,
   onBilibiliLoginClick: () -> Unit,
   onBilibiliLogoutClick: () -> Unit,
-  showThemeToggle: Boolean,
-  onThemeToggle: () -> Unit,
   showSearch: Boolean,
-  showSync: Boolean,
+  showPlatformActions: Boolean,
   showSettings: Boolean,
   onSettingsClick: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
   Surface(
     modifier = modifier.statusBarsPadding(),
     color = Color.Transparent,
@@ -314,25 +284,9 @@ private fun HubTopBar(
         Spacer(modifier = Modifier.weight(1f))
       }
 
-      if (showSync) {
-        IconButton(onClick = onSyncClick) {
-          Icon(
-            imageVector = Icons.Default.Devices,
-            contentDescription = "数据同步",
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-          )
-        }
-      }
-
-      if (showThemeToggle) {
-        IconButton(onClick = onThemeToggle) {
-          Icon(
-             imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
-              contentDescription = "日夜模式",
-             tint = if (isDark) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-          )
-        }
-      } else {
+      // 数据同步与主题模式入口已迁移到「设置」页；
+      // 顶栏仅保留平台页专属操作（B站登录 / 简易模式）与首页的设置入口。
+      if (showPlatformActions) {
         if (showBilibiliLogin) {
           IconButton(
             onClick = if (bilibiliLoggedIn) onBilibiliLogoutClick else onBilibiliLoginClick,
