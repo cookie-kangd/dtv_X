@@ -156,7 +156,7 @@ class AppState(
     subscriptionStore.saveSimpleModeByPlatform(entries)
   }
 
-  fun setRememberCategoryEnabled(enabled: Boolean) {
+  fun updateRememberCategoryEnabled(enabled: Boolean) {
     rememberCategoryEnabled = enabled
     subscriptionStore.saveRememberCategoryEnabled(enabled)
   }

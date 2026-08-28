@@ -215,7 +215,7 @@ private fun BasicSettingsSection(
           }
           Switch(
             checked = appState.rememberCategoryEnabled,
-            onCheckedChange = appState::setRememberCategoryEnabled,
+            onCheckedChange = appState::updateRememberCategoryEnabled,
           )
         }
       }
