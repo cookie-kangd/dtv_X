@@ -67,7 +67,15 @@ actual fun BilibiliWebLoginSheet(
 ) {
   var mode by remember { mutableStateOf(LoginMode.QR) }
 
-  ModalBottomSheet(onDismissRequest = onDismissRequest) {
+  // skipPartiallyExpanded = true：弹窗直接完整展开到顶部，不再停在半屏需要手动上拖
+  val sheetState = androidx.compose.material3.rememberModalBottomSheetState(
+    skipPartiallyExpanded = true,
+  )
+
+  ModalBottomSheet(
+    onDismissRequest = onDismissRequest,
+    sheetState = sheetState,
+  ) {
     Column(
       modifier = Modifier
         .fillMaxWidth()

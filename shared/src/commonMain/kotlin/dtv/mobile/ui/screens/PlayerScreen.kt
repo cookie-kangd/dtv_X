@@ -84,7 +84,10 @@ import dtv.mobile.model.Platform
 import dtv.mobile.model.Streamer
 import dtv.mobile.repo.DanmakuMessage
 import dtv.mobile.repo.DouyuPlayInfo
+import dtv.mobile.repo.DouyuPlayVariant
+import dtv.mobile.repo.DtvRepository
 import dtv.mobile.state.AppState
+import dtv.mobile.state.VideoQuality
 import dtv.mobile.theme.DtvColors
 import dtv.mobile.ui.components.NetworkImage
 import dtv.mobile.ui.player.StreamPlayer
@@ -176,19 +179,24 @@ fun PlayerScreen(
         runCatching { appState.repo.fetchDouyuPlayInfo(roomId = s.roomId) }
           .onSuccess { info ->
             playInfo = info
-            // 去掉"自动"后：进入房间默认选真实最高画质（rate 最大档），随后重新解析为最高流
+            // 去掉"自动"后：默认档位跟随「设置-基本设置-画质」，
+            // 选「低」就用最低档，「最高」就用真实最高档（rate 最大）
             if (selectedDouyuRate == null) {
-              info.variants.maxByOrNull { it.rate }?.let { best ->
-                selectedDouyuRate = best.rate.toString()
+              val picked = pickDouyuRate(info.variants, appState.videoQuality)
+              if (picked != null) {
+                selectedDouyuRate = picked
                 scope.launch {
                   runCatching {
-                    appState.repo.resolveDouyuStreamUrl(
+                    resolveDouyuWithFallback(
+                      repo = appState.repo,
                       roomId = s.roomId,
-                      quality = selectedDouyuRate,
+                      preferredRate = picked,
                       cdn = selectedDouyuCdn,
                     )
-                  }.onSuccess { url = it }
-                    .onFailure { error = it.message ?: "获取最高画质播放地址失败" }
+                  }.onSuccess { (resolvedUrl, actualRate) ->
+                    selectedDouyuRate = actualRate
+                    url = resolvedUrl
+                  }.onFailure { error = it.message ?: "获取播放地址失败" }
                 }
               }
             }
@@ -203,38 +211,36 @@ fun PlayerScreen(
           .onFailure { error = it.message ?: "获取虎牙播放地址失败" }
       }
       Platform.Douyin -> {
-        // 去掉"自动"后：进房间直接以原画（ORIGIN，真实最高）解析，不再走平台默认流
-        if (selectedDouyinQuality == null) selectedDouyinQuality = "ORIGIN"
-        runCatching { appState.repo.resolveDouyinStreamUrl(webRid = s.roomId, desiredQuality = selectedDouyinQuality) }
-          .onSuccess { url = it }
-          .onFailure { firstErr ->
-            // 原画失败（会员限制/本场直播无该档位）→ 自动降级到超清 FULL_HD1
-            if (selectedDouyinQuality == "ORIGIN") {
-              selectedDouyinQuality = "FULL_HD1"
-              runCatching { appState.repo.resolveDouyinStreamUrl(webRid = s.roomId, desiredQuality = selectedDouyinQuality) }
-                .onSuccess { url = it }
-                .onFailure { error = "原画不可用（${firstErr.message ?: "未知错误"}），降级到超清仍失败" }
-            } else {
-              error = firstErr.message ?: "获取抖音播放地址失败"
-            }
-          }
+        // 去掉"自动"后：默认档位跟随「设置-基本设置-画质」
+        if (selectedDouyinQuality == null) {
+          selectedDouyinQuality = pickDouyinQuality(appState.videoQuality)
+        }
+        runCatching {
+          resolveDouyinWithFallback(
+            repo = appState.repo,
+            webRid = s.roomId,
+            preferred = selectedDouyinQuality ?: "ORIGIN",
+          )
+        }.onSuccess { (resolvedUrl, actualQuality) ->
+          selectedDouyinQuality = actualQuality
+          url = resolvedUrl
+        }.onFailure { error = it.message ?: "获取抖音播放地址失败" }
       }
       Platform.Bilibili -> {
-        // 去掉"自动"后：进房间直接以原画（qn=10000，真实最高）解析
-        if (selectedBilibiliQn == null) selectedBilibiliQn = 10000
-        runCatching { appState.repo.resolveBilibiliStreamUrl(roomId = s.roomId, qn = selectedBilibiliQn) }
-          .onSuccess { url = it }
-          .onFailure { firstErr ->
-            // 原画失败（未登录或非大会员）→ 自动降级到蓝光 400
-            if (selectedBilibiliQn == 10000) {
-              selectedBilibiliQn = 400
-              runCatching { appState.repo.resolveBilibiliStreamUrl(roomId = s.roomId, qn = selectedBilibiliQn) }
-                .onSuccess { url = it }
-                .onFailure { error = "原画不可用（${firstErr.message ?: "未知错误"}），降级到蓝光仍失败" }
-            } else {
-              error = firstErr.message ?: "获取B站播放地址失败"
-            }
-          }
+        // 去掉"自动"后：默认档位跟随「设置-基本设置-画质」
+        if (selectedBilibiliQn == null) {
+          selectedBilibiliQn = pickBilibiliQn(appState.videoQuality)
+        }
+        runCatching {
+          resolveBilibiliWithFallback(
+            repo = appState.repo,
+            roomId = s.roomId,
+            preferred = selectedBilibiliQn ?: 10000,
+          )
+        }.onSuccess { (resolvedUrl, actualQn) ->
+          selectedBilibiliQn = actualQn
+          url = resolvedUrl
+        }.onFailure { error = it.message ?: "获取B站播放地址失败" }
       }
       else -> {
         error = "暂不支持的平台：${s.platform.title}"
@@ -1538,4 +1544,110 @@ private fun RowWrapFloat(
       )
     }
   }
+}
+
+/** 抖音清晰度，从低到高 */
+private val DOUYIN_QUALITY_ASC = listOf("SD1", "HD1", "FULL_HD1", "ORIGIN")
+
+/** B站清晰度 qn，从低到高 */
+private val BILIBILI_QN_ASC = listOf(80, 150, 250, 400, 10000)
+
+/**
+ * 斗鱼：按 rate 升序后按全局画质档位取索引。
+ * 低→最低档，中→中间档，高→次高档，最高→最高档（真实最高）。
+ */
+private fun pickDouyuRate(variants: List<DouyuPlayVariant>, quality: VideoQuality): String? {
+  if (variants.isEmpty()) return null
+  val sorted = variants.sortedBy { it.rate }
+  val index = when (quality) {
+    VideoQuality.Low -> 0
+    VideoQuality.Medium -> sorted.size / 2
+    VideoQuality.High -> (sorted.size - 2).coerceAtLeast(0)
+    VideoQuality.Highest -> sorted.size - 1
+  }
+  return sorted[index.coerceIn(0, sorted.size - 1)].rate.toString()
+}
+
+private fun pickDouyinQuality(quality: VideoQuality): String = when (quality) {
+  VideoQuality.Low -> "SD1"
+  VideoQuality.Medium -> "HD1"
+  VideoQuality.High -> "FULL_HD1"
+  VideoQuality.Highest -> "ORIGIN"
+}
+
+private fun pickBilibiliQn(quality: VideoQuality): Int = when (quality) {
+  VideoQuality.Low -> 80
+  VideoQuality.Medium -> 250
+  VideoQuality.High -> 400
+  VideoQuality.Highest -> 10000
+}
+
+/**
+ * 抖音：从首选档位开始，失败则逐级降低清晰度，返回 (播放地址, 实际生效档位)。
+ */
+private suspend fun resolveDouyinWithFallback(
+  repo: DtvRepository,
+  webRid: String,
+  preferred: String,
+): Pair<String, String> {
+  val start = DOUYIN_QUALITY_ASC.indexOf(preferred).coerceAtLeast(0)
+  var lastErr: Throwable? = null
+  for (i in start until DOUYIN_QUALITY_ASC.size) {
+    val q = DOUYIN_QUALITY_ASC[i]
+    runCatching { repo.resolveDouyinStreamUrl(webRid = webRid, desiredQuality = q) }
+      .onSuccess { return it to q }
+      .onFailure { lastErr = it }
+  }
+  throw lastErr ?: IllegalStateException("获取抖音播放地址失败")
+}
+
+/**
+ * B站：从首选 qn 开始，失败则逐级降低清晰度，返回 (播放地址, 实际生效 qn)。
+ * 原画需要登录/大会员，未登录时会自动降到蓝光等可用档位。
+ */
+private suspend fun resolveBilibiliWithFallback(
+  repo: DtvRepository,
+  roomId: String,
+  preferred: Int,
+): Pair<String, Int> {
+  val start = BILIBILI_QN_ASC.indexOf(preferred).coerceAtLeast(0)
+  var lastErr: Throwable? = null
+  for (i in start until BILIBILI_QN_ASC.size) {
+    val qn = BILIBILI_QN_ASC[i]
+    runCatching { repo.resolveBilibiliStreamUrl(roomId = roomId, qn = qn) }
+      .onSuccess { return it to qn }
+      .onFailure { lastErr = it }
+  }
+  throw lastErr ?: IllegalStateException("获取B站播放地址失败")
+}
+
+/**
+ * 斗鱼：从首选 rate 开始，失败则依次尝试更低的 rate，返回 (播放地址, 实际生效 rate)。
+ */
+private suspend fun resolveDouyuWithFallback(
+  repo: DtvRepository,
+  roomId: String,
+  preferredRate: String,
+  cdn: String?,
+): Pair<String, String> {
+  val info = runCatching { repo.fetchDouyuPlayInfo(roomId = roomId) }.getOrNull()
+  val desc = info?.variants?.sortedByDescending { it.rate }.orEmpty()
+  val order = buildList {
+    add(preferredRate)
+    // 依次尝试比首选更低的档位
+    val preferredInt = preferredRate.toIntOrNull()
+    if (preferredInt != null) {
+      desc.filter { it.rate < preferredInt }.forEach { add(it.rate.toString()) }
+    } else {
+      desc.forEach { add(it.rate.toString()) }
+    }
+  }.distinct()
+
+  var lastErr: Throwable? = null
+  for (rate in order) {
+    runCatching { repo.resolveDouyuStreamUrl(roomId = roomId, quality = rate, cdn = cdn) }
+      .onSuccess { return it to rate }
+      .onFailure { lastErr = it }
+  }
+  throw lastErr ?: IllegalStateException("获取播放地址失败")
 }

@@ -1,5 +1,6 @@
 package dtv.mobile.ui.screens
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dtv.mobile.model.Platform
@@ -230,12 +232,23 @@ fun SimpleModePlatformScreen(
             )
           }
 
-          item(span = { GridItemSpan(2) }) {
-            Spacer(modifier = Modifier.height(4.dp))
-            when {
-              loadingMore -> Text("加载更多…", style = MaterialTheme.typography.bodyMedium)
-              hasMore -> Text("继续滑动加载更多", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
-              else -> Spacer(modifier = Modifier.height(12.dp))
+          item(span = { GridItemSpan(cardMetrics.columns) }) {
+            // 底部提示单独占满一整行并居中；没有更多数据时不再显示任何提示
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp),
+              contentAlignment = Alignment.Center,
+            ) {
+              when {
+                loadingMore -> Text("加载更多…", style = MaterialTheme.typography.bodyMedium)
+                hasMore -> Text(
+                  "继续滑动加载更多",
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                )
+                else -> Unit
+              }
             }
           }
         }

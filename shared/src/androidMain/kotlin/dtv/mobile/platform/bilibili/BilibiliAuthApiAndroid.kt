@@ -60,8 +60,25 @@ class BilibiliAuthApiAndroid(
     }
 
     if (status == BilibiliQrStatus.Confirmed) {
+      // 1) 响应头的 Set-Cookie
       val setCookie = resp.headers.getAll("Set-Cookie").orEmpty()
-      cookieStore.mergeFromSetCookieHeaders(setCookie)
+      if (setCookie.isNotEmpty()) cookieStore.mergeFromSetCookieHeaders(setCookie)
+
+      // 2) B站 登录成功后把 SESSDATA / bili_jct / DedeUserID 等放在 data.url 的 query 里，
+      //    必须一并取出，否则只靠 Set-Cookie 往往拿不到完整登录态（表现为"退出 App 就掉登录"）。
+      val redirectUrl = data?.get("url").stringValueOrNull()
+      if (!redirectUrl.isNullOrBlank()) {
+        runCatching {
+          val params = io.ktor.http.Url(redirectUrl).parameters
+          val pairs = params.entries()
+            .filter { (key, _) -> key.isNotBlank() }
+            .mapNotNull { (key, values) ->
+              val value = values.firstOrNull()
+              if (value.isNullOrBlank()) null else "$key=$value"
+            }
+          if (pairs.isNotEmpty()) cookieStore.mergeFromCookieHeader(pairs.joinToString("; "))
+        }
+      }
     }
 
     return BilibiliQrPollResult(status = status, message = message)
