@@ -38,7 +38,7 @@ jobs:
       - name: Create CI signing keystore
         run: |
           keytool -genkeypair -v \
-            -keystore ci.keystore \
+            -keystore androidApp/ci.keystore \
             -alias dtv \
             -keyalg RSA \
             -keysize 2048 \
@@ -46,7 +46,7 @@ jobs:
             -storepass dtvci123456 \
             -keypass dtvci123456 \
             -dname "CN=DTV CI, OU=CI, O=DTV, L=Beijing, ST=Beijing, C=CN"
-          printf 'storeFile=ci.keystore\nstorePassword=dtvci123456\nkeyAlias=dtv\nkeyPassword=dtvci123456\n' > keystore.properties
+          printf 'storeFile=ci.keystore\nstorePassword=dtvci123456\nkeyAlias=dtv\nkeyPassword=dtvci123456\n' > androidApp/keystore.properties
 
       - name: Build release APK
         # Skip the Aliyun mirror in CI (unstable / 502) and use Google/Maven Central directly.
