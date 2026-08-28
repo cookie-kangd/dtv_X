@@ -70,7 +70,7 @@ class AndroidUpdateManager(
   private val json = Json { ignoreUnknownKeys = true }
   private val client = OkHttpClient.Builder()
     .connectTimeout(20, TimeUnit.SECONDS)
-    .readTimeout(60, TimeUnit.SECONDS)
+    .readTimeout(180, TimeUnit.SECONDS)
     .build()
 
   override fun check() {
@@ -174,6 +174,21 @@ class AndroidUpdateManager(
       if (!file.exists()) error("安装包不存在")
       val authority = "${appContext.packageName}.fileprovider"
       val uri = FileProvider.getUriForFile(appContext, authority, file)
+
+      // Android 8.0+ 必须在"允许安装未知应用"被授权后才能 startActivity 安装第三方包，
+      // 否则 startActivity 会静默失败，用户毫无反应。这里先检查，未授权则跳转到设置。
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+        !appContext.packageManager.canRequestPackageInstalls()
+      ) {
+        val settingsIntent = Intent(
+          android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+          android.net.Uri.parse("package:${appContext.packageName}"),
+        ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+        appContext.startActivity(settingsIntent)
+        state = UpdateState.Failed("请先在系统设置中允许安装来自此来源的应用，然后重新点击「下载并安装」")
+        return
+      }
+
       val intent = Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(uri, "application/vnd.android.package-archive")
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)

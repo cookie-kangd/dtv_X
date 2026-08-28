@@ -207,14 +207,34 @@ fun PlayerScreen(
         if (selectedDouyinQuality == null) selectedDouyinQuality = "ORIGIN"
         runCatching { appState.repo.resolveDouyinStreamUrl(webRid = s.roomId, desiredQuality = selectedDouyinQuality) }
           .onSuccess { url = it }
-          .onFailure { error = it.message ?: "获取抖音播放地址失败" }
+          .onFailure { firstErr ->
+            // 原画失败（会员限制/本场直播无该档位）→ 自动降级到超清 FULL_HD1
+            if (selectedDouyinQuality == "ORIGIN") {
+              selectedDouyinQuality = "FULL_HD1"
+              runCatching { appState.repo.resolveDouyinStreamUrl(webRid = s.roomId, desiredQuality = selectedDouyinQuality) }
+                .onSuccess { url = it }
+                .onFailure { error = "原画不可用（${firstErr.message ?: "未知错误"}），降级到超清仍失败" }
+            } else {
+              error = firstErr.message ?: "获取抖音播放地址失败"
+            }
+          }
       }
       Platform.Bilibili -> {
         // 去掉"自动"后：进房间直接以原画（qn=10000，真实最高）解析
         if (selectedBilibiliQn == null) selectedBilibiliQn = 10000
         runCatching { appState.repo.resolveBilibiliStreamUrl(roomId = s.roomId, qn = selectedBilibiliQn) }
           .onSuccess { url = it }
-          .onFailure { error = it.message ?: "获取B站播放地址失败" }
+          .onFailure { firstErr ->
+            // 原画失败（未登录或非大会员）→ 自动降级到蓝光 400
+            if (selectedBilibiliQn == 10000) {
+              selectedBilibiliQn = 400
+              runCatching { appState.repo.resolveBilibiliStreamUrl(roomId = s.roomId, qn = selectedBilibiliQn) }
+                .onSuccess { url = it }
+                .onFailure { error = "原画不可用（${firstErr.message ?: "未知错误"}），降级到蓝光仍失败" }
+            } else {
+              error = firstErr.message ?: "获取B站播放地址失败"
+            }
+          }
       }
       else -> {
         error = "暂不支持的平台：${s.platform.title}"
