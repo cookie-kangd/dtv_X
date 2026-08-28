@@ -253,7 +253,7 @@ private fun statusText(status: QrStatusUi, msg: String?): String = when (status)
   QrStatusUi.Waiting -> "请打开 B站 App 扫一扫登录"
   QrStatusUi.Scanned -> "已扫码，请在手机上确认登录"
   QrStatusUi.Confirmed -> "登录成功，正在关闭…"
-  QrStatusUi.Expired -> msg ?: "二维码已失效，点"刷新二维码"重试"
+  QrStatusUi.Expired -> msg ?: "二维码已失效，点'刷新二维码'重试"
   QrStatusUi.Failed -> msg ?: "登录失败，请重试"
 }
 
