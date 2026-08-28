@@ -277,8 +277,14 @@ fun PlayerScreen(
       exitToPortrait = fullscreenEntry == FullscreenEntry.ManualOff,
     )
     PlatformBackHandler(enabled = fullscreen) {
-      fullscreen = false
-      fullscreenEntry = FullscreenEntry.None
+      if (fullscreenEntry == FullscreenEntry.Auto) {
+        // 横屏旋转自动进入的全屏：第一次返回直接退出播放器。
+        // 否则会先"退出全屏"，但手机仍处横屏、界面几乎无变化，导致需要按两次才退出。
+        appState.back()
+      } else {
+        fullscreen = false
+        fullscreenEntry = FullscreenEntry.None
+      }
     }
 
     val settingsStreamer = streamer

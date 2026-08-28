@@ -124,14 +124,12 @@ actual fun StreamPlayer(
       }
     }
     player.addListener(listener)
-    onDispose { player.removeListener(listener) }
-  }
-
-  DisposableEffect(player) {
     onDispose {
-      // Fully tear down the player when the player screen is closed / url changes.
-      // Stop playback first, drop the media items, then release all native resources
-      // (codecs, decoders, audio session, surface) so nothing lingers in the background.
+      // 1) 先摘除监听：销毁时 stop()/release() 仍会派发 onVideoSizeChanged 等回调，
+      //    若回调回播放页会造成退出瞬间的状态抖动，甚至重新拉起播放器（表现为要点两次返回）。
+      player.removeListener(listener)
+      // 2) 再彻底销毁播放器：停止播放 → 清空媒体源 → 释放解码器/音频等底层资源，
+      //    确保关闭播放页后不再残留任何播放资源占用。
       AppLog.i("DTV-Player", "destroying player url=$url")
       runCatching {
         player.playWhenReady = false

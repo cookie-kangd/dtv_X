@@ -176,7 +176,7 @@ fun RootScaffold(appState: AppState) {
             onThemeToggle = appState::toggleDayNight,
             showSearch = appState.currentScreen != Screen.Home,
             showSync = appState.currentScreen == Screen.Home,
-            showSettings = appState.currentScreen == Screen.Platform,
+            showSettings = appState.currentScreen == Screen.Home,
             onSettingsClick = appState::openSettings,
           )
         }
