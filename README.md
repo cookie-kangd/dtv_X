@@ -1,13 +1,12 @@
-<p align="center"><img src="screenshots/icon.png" width="96" height="96" alt="DTV X" /></p>
+<p align="center"><img src="screenshots/icon.png" width="96" height="96" alt="dtv_X" /></p>
 
-<h3 align="center">DTV X</h3>
+<h3 align="center">dtv_X</h3>
 
 <p align="center">
-  抖音、b站、斗鱼、虎牙轻量化安卓客户端(非官方)
+  轻量化直播app，抖音、b站、斗鱼、虎牙平台，专注看直播(非官方)
 </p>
 
-> 这是 DTV 项目的 Android 版本
-> 此仓库用于自己对dtv_mobile的修改，想要打赏请去上游作者仓库
+> 此仓库用于自己对dtv_mobile的修改，初衷让自己更适用，打赏请去上游作者仓库，感谢作者的开源
 
 ---
 
@@ -17,7 +16,7 @@
 - 分区浏览：按平台分类浏览直播列表，支持订阅常用分区（快速入口）
 - 关注管理：一键关注/取消关注；首页支持置顶与长按拖拽排序
 - 搜索：按平台搜索主播/直播间；B站支持登录/退出
-- 播放：基于 Android Media3（ExoPlayer）播放；全屏/横竖屏适配；画质档位（最高/高/中/低）；线条选择
+- 播放：基于 Android Media3（ExoPlayer）播放；全屏/横竖屏适配；画质档位（最高/高/中/低）；线路选择
 - 弹幕：实时弹幕展示；关键词屏蔽；字号/透明度/显示区域可调
 - 数据同步：局域网共享 / 导入关注、分区订阅与屏蔽词
 - 主题：浅色 / 深色 / 跟随系统
