@@ -58,6 +58,9 @@ interface SubscriptionStore {
 
   fun loadCompactCardEnabled(): Boolean
   fun saveCompactCardEnabled(value: Boolean)
+
+  fun loadVideoQuality(): String
+  fun saveVideoQuality(value: String)
 }
 
 object InMemorySubscriptionStore : SubscriptionStore {
@@ -75,6 +78,7 @@ object InMemorySubscriptionStore : SubscriptionStore {
   private var rememberedCategories: List<RememberedCategoryEntry> = emptyList()
   private var accentColorHex: String = ""
   private var compactCardEnabled: Boolean = true
+  private var videoQuality: String = VideoQuality.Highest.name
 
   override fun loadThemeMode(): ThemeMode = themeMode
 
@@ -158,5 +162,11 @@ object InMemorySubscriptionStore : SubscriptionStore {
 
   override fun saveCompactCardEnabled(value: Boolean) {
     compactCardEnabled = value
+  }
+
+  override fun loadVideoQuality(): String = videoQuality
+
+  override fun saveVideoQuality(value: String) {
+    videoQuality = value
   }
 }

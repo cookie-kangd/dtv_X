@@ -54,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dtv.mobile.state.AppState
 import dtv.mobile.state.ThemeMode
+import dtv.mobile.state.VideoQuality
 import dtv.mobile.ui.system.PlatformBackHandler
 import dtv.mobile.update.AppUpdateInfo
 import dtv.mobile.update.UpdateState
@@ -193,6 +194,45 @@ private fun UpdateCheckerCard(
             }
           }
         }
+      }
+    }
+  }
+}
+
+@Composable
+private fun VideoQualitySelector(
+  selected: VideoQuality,
+  onSelect: (VideoQuality) -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  val options = VideoQuality.entries
+  Row(
+    modifier = modifier
+      .fillMaxWidth()
+      .clip(RoundedCornerShape(12.dp))
+      .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+      .padding(4.dp),
+    horizontalArrangement = Arrangement.spacedBy(4.dp),
+  ) {
+    options.forEach { quality ->
+      val isSelected = quality == selected
+      Box(
+        modifier = Modifier
+          .weight(1f)
+          .clip(RoundedCornerShape(9.dp))
+          .background(
+            if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+          )
+          .clickable { onSelect(quality) }
+          .padding(vertical = 9.dp),
+        contentAlignment = Alignment.Center,
+      ) {
+        Text(
+          text = quality.label,
+          style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+          color = if (isSelected) Color.Black else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+          maxLines = 1,
+        )
       }
     }
   }
@@ -425,6 +465,22 @@ private fun BasicSettingsSection(
           onCheckedChange = appState::updateCompactCardEnabled,
         )
       }
+    }
+
+    // 播放画质（默认最高）
+    SettingsCard {
+      Text("播放画质", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+      Spacer(modifier = Modifier.height(2.dp))
+      Text(
+        text = "默认「最高」：不限制分辨率上限，优先取流中的最高码率，保证画面最清晰。网络较差时可下调档位换取流畅。",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+      )
+      Spacer(modifier = Modifier.height(10.dp))
+      VideoQualitySelector(
+        selected = appState.videoQuality,
+        onSelect = appState::updateVideoQuality,
+      )
     }
 
     // 主题模式（亮色 / 暗色 / 跟随系统）

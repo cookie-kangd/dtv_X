@@ -31,6 +31,7 @@ class AppState(
   var danmakuAreaFraction: Float by mutableStateOf(0.5f)
   var rememberCategoryEnabled: Boolean by mutableStateOf(true)
   var compactCardEnabled: Boolean by mutableStateOf(true)
+  var videoQuality: VideoQuality by mutableStateOf(VideoQuality.Highest)
   var accentColorHex: String by mutableStateOf("")
   var platformSwitchLoading: Boolean by mutableStateOf(false)
   var selectedPlatform: Platform by mutableStateOf(Platform.Douyu)
@@ -61,6 +62,7 @@ class AppState(
     danmakuAreaFraction = subscriptionStore.loadDanmakuAreaFraction()
     rememberCategoryEnabled = subscriptionStore.loadRememberCategoryEnabled()
     compactCardEnabled = subscriptionStore.loadCompactCardEnabled()
+    videoQuality = VideoQuality.fromNameOrHighest(subscriptionStore.loadVideoQuality())
     accentColorHex = subscriptionStore.loadAccentColorHex()
 
     subscriptionStore.loadSimpleModeByPlatform().forEach { entry ->
@@ -186,6 +188,11 @@ class AppState(
   fun updateCompactCardEnabled(enabled: Boolean) {
     compactCardEnabled = enabled
     subscriptionStore.saveCompactCardEnabled(enabled)
+  }
+
+  fun updateVideoQuality(quality: VideoQuality) {
+    videoQuality = quality
+    subscriptionStore.saveVideoQuality(quality.name)
   }
 
   suspend fun refreshFollowedLiveStatus() {

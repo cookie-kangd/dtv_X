@@ -25,6 +25,8 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import dtv.mobile.state.LocalVideoQuality
+import dtv.mobile.state.VideoQuality
 import dtv.mobile.util.AppLog
 import java.io.File
 
@@ -84,6 +86,7 @@ private fun buildPlayer(
   context: Context,
   url: String,
   liveMode: Boolean,
+  quality: VideoQuality,
 ): ExoPlayer {
   val headers = buildMap {
     put(
@@ -132,9 +135,15 @@ private fun buildPlayer(
       .build()
   }
 
-  // 限制最大解码分辨率，避免超高码率流占用过多内存导致 OOM / 掉帧。
+  // 画质档位决定允许选择的视频轨分辨率上限。
+  // 「最高」档不再限制 1080p：解除分辨率上限并强制取流中最高码率，优先保证画面清晰。
   val trackSelector = DefaultTrackSelector(context).apply {
-    setParameters(buildUponParameters().setMaxVideoSize(1920, 1080))
+    setParameters(
+      buildUponParameters()
+        .setMaxVideoSize(quality.maxWidth, quality.maxHeight)
+        .setForceHighestSupportedBitrate(quality.forceHighestSupportedBitrate)
+        .build(),
+    )
   }
 
   return ExoPlayer.Builder(context)
@@ -162,10 +171,12 @@ actual fun StreamPlayer(
   modifier: Modifier,
 ) {
   val context = LocalContext.current
+  val quality = LocalVideoQuality.current
   // 兜底：构建播放器的任何一步失败都不允许把 App 带崩，
   // 失败时降级为"零可选配置"的最简播放器继续起播。
-  val player = remember(url) {
-    runCatching { buildPlayer(context = context, url = url, liveMode = liveMode) }
+  // 画质档位变化时重建播放器，使新的分辨率/码率策略立即生效。
+  val player = remember(url, quality) {
+    runCatching { buildPlayer(context = context, url = url, liveMode = liveMode, quality = quality) }
       .getOrElse { t ->
         AppLog.e("DTV-Player", "build player failed, fallback to minimal player: url=$url", t)
         ExoPlayer.Builder(context).build().apply {

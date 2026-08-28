@@ -136,4 +136,12 @@ class SubscriptionStoreAndroid(
   override fun saveCompactCardEnabled(value: Boolean) {
     prefs.edit().putBoolean("compact_card_enabled", value).apply()
   }
+
+  // 默认取最高画质
+  override fun loadVideoQuality(): String =
+    prefs.getString("video_quality", null)?.takeIf { it.isNotBlank() } ?: VideoQuality.Highest.name
+
+  override fun saveVideoQuality(value: String) {
+    prefs.edit().putString("video_quality", value).apply()
+  }
 }
