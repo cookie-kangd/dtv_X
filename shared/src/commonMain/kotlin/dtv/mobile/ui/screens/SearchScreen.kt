@@ -91,6 +91,7 @@ fun SearchScreen(
 
   if (platform == Platform.Bilibili && showBilibiliLoginSheet) {
     BilibiliWebLoginSheet(
+      appState = appState,
       onDismissRequest = { showBilibiliLoginSheet = false },
       onCookieCaptured = { cookieHeader ->
         scope.launch {

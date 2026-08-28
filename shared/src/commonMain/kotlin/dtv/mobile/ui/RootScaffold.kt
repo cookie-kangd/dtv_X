@@ -85,6 +85,7 @@ fun RootScaffold(appState: AppState) {
 
   if (showBilibiliLoginSheet) {
     BilibiliWebLoginSheet(
+      appState = appState,
       onDismissRequest = { showBilibiliLoginSheet = false },
       onCookieCaptured = { cookieHeader ->
         scope.launch {
