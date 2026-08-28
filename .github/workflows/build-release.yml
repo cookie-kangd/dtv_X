@@ -86,11 +86,14 @@ jobs:
         run: |
           VERSION="$APP_VERSION"
           TAG="v${VERSION}"
-          # 同名 release 已存在时先删除，保证 tag 始终指向最新一次构建的 APK
+          # 同名 release 已存在时先删除
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "existing release $TAG found, replacing it"
             gh release delete "$TAG" --yes
           fi
+          # release delete 不会删除同名 tag，这里显式清理，
+          # 保证下面创建 release 时新建的 tag 指向本次构建对应的 commit
+          git push --delete origin "refs/tags/$TAG" 2>/dev/null || echo "remote tag $TAG absent, skip"
           {
             echo "## DTV Mobile 更新说明"
             echo ""
