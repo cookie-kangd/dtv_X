@@ -6,7 +6,10 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
@@ -49,7 +52,7 @@ private data class GitHubAsset(
 class AndroidUpdateManager(
   private val appContext: Context,
 ) : UpdateManager {
-  override var state: UpdateState by mutableStateOf(UpdateState.Idle)
+  override var state: UpdateState by mutableStateOf<UpdateState>(UpdateState.Idle)
     private set
 
   override val currentVersionName: String = runCatching {
@@ -170,8 +173,7 @@ class AndroidUpdateManager(
       val file = File(fileUri)
       if (!file.exists()) error("安装包不存在")
       val authority = "${appContext.packageName}.fileprovider"
-      val uri = FileProvider.getContentUriForFile(appContext, authority, file)
-        ?: error("无法生成安装地址")
+      val uri = FileProvider.getUriForFile(appContext, authority, file)
       val intent = Intent(Intent.ACTION_VIEW).apply {
         setDataAndType(uri, "application/vnd.android.package-archive")
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -212,7 +214,7 @@ class AndroidUpdateManager(
 actual fun rememberUpdateManager(): UpdateManager {
   val context = LocalContext.current
   val manager = remember(context) { AndroidUpdateManager(context.applicationContext) }
-  androidx.compose.runtime.DisposableEffect(manager) {
+  DisposableEffect(manager) {
     onDispose { manager.dispose() }
   }
   return manager
