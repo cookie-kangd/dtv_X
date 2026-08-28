@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -48,6 +49,7 @@ import dtv.mobile.ui.screens.HomeScreen
 import dtv.mobile.ui.screens.PlatformScreen
 import dtv.mobile.ui.screens.PlayerScreen
 import dtv.mobile.ui.screens.SearchScreen
+import dtv.mobile.ui.screens.SettingsScreen
 import dtv.mobile.ui.screens.SyncScreen
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Color
@@ -139,6 +141,20 @@ fun RootScaffold(appState: AppState) {
             ),
           )
         }
+        Screen.Settings -> {
+          CenterAlignedTopAppBar(
+            title = { Text(text = "设置") },
+            navigationIcon = {
+              IconButton(onClick = { appState.back() }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+              }
+            },
+            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+              containerColor = Color.Transparent,
+              scrolledContainerColor = Color.Transparent,
+            ),
+          )
+        }
         else -> {
           HubTopBar(
             title = if (appState.currentScreen == Screen.Home) "关注列表" else appState.selectedPlatform.title,
@@ -160,6 +176,8 @@ fun RootScaffold(appState: AppState) {
             onThemeToggle = appState::toggleDayNight,
             showSearch = appState.currentScreen != Screen.Home,
             showSync = appState.currentScreen == Screen.Home,
+            showSettings = appState.currentScreen == Screen.Platform,
+            onSettingsClick = appState::openSettings,
           )
         }
       }
@@ -214,6 +232,10 @@ fun RootScaffold(appState: AppState) {
           modifier = Modifier.padding(padding),
           appState = appState,
         )
+        Screen.Settings -> SettingsScreen(
+          modifier = Modifier.padding(padding),
+          appState = appState,
+        )
       }
     }
   }
@@ -235,6 +257,8 @@ private fun HubTopBar(
   onThemeToggle: () -> Unit,
   showSearch: Boolean,
   showSync: Boolean,
+  showSettings: Boolean,
+  onSettingsClick: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -329,6 +353,16 @@ private fun HubTopBar(
           selected = simpleMode,
           onClick = onSimpleModeToggle,
         )
+      }
+
+      if (showSettings) {
+        IconButton(onClick = onSettingsClick) {
+          Icon(
+            imageVector = Icons.Default.Settings,
+            contentDescription = "设置",
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+          )
+        }
       }
     }
   }

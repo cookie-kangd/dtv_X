@@ -106,4 +106,26 @@ class SubscriptionStoreAndroid(
     val raw = json.encodeToString(ListSerializer(SimpleModeEntry.serializer()), items)
     prefs.edit().putString("simple_mode_by_platform", raw).apply()
   }
+
+  override fun loadRememberCategoryEnabled(): Boolean = prefs.getBoolean("remember_category_enabled", false)
+
+  override fun saveRememberCategoryEnabled(value: Boolean) {
+    prefs.edit().putBoolean("remember_category_enabled", value).apply()
+  }
+
+  override fun loadRememberedCategoryByPlatform(): List<RememberedCategoryEntry> {
+    val raw = prefs.getString("remembered_category_by_platform", null)?.takeIf { it.isNotBlank() } ?: return emptyList()
+    return runCatching { json.decodeFromString(ListSerializer(RememberedCategoryEntry.serializer()), raw) }.getOrElse { emptyList() }
+  }
+
+  override fun saveRememberedCategoryByPlatform(items: List<RememberedCategoryEntry>) {
+    val raw = json.encodeToString(ListSerializer(RememberedCategoryEntry.serializer()), items)
+    prefs.edit().putString("remembered_category_by_platform", raw).apply()
+  }
+
+  override fun loadAccentColorHex(): String = prefs.getString("accent_color_hex", "") ?: ""
+
+  override fun saveAccentColorHex(hex: String) {
+    prefs.edit().putString("accent_color_hex", hex).apply()
+  }
 }

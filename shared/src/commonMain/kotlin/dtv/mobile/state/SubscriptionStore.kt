@@ -10,6 +10,12 @@ data class SimpleModeEntry(
   val enabled: Boolean,
 )
 
+@Serializable
+data class RememberedCategoryEntry(
+  val platform: Platform,
+  val partitionId: String,
+)
+
 interface SubscriptionStore {
   fun loadThemeMode(): ThemeMode
   fun saveThemeMode(value: ThemeMode)
@@ -40,6 +46,15 @@ interface SubscriptionStore {
 
   fun loadSimpleModeByPlatform(): List<SimpleModeEntry>
   fun saveSimpleModeByPlatform(items: List<SimpleModeEntry>)
+
+  fun loadRememberCategoryEnabled(): Boolean
+  fun saveRememberCategoryEnabled(value: Boolean)
+
+  fun loadRememberedCategoryByPlatform(): List<RememberedCategoryEntry>
+  fun saveRememberedCategoryByPlatform(items: List<RememberedCategoryEntry>)
+
+  fun loadAccentColorHex(): String
+  fun saveAccentColorHex(hex: String)
 }
 
 object InMemorySubscriptionStore : SubscriptionStore {
@@ -53,6 +68,9 @@ object InMemorySubscriptionStore : SubscriptionStore {
   private var partitions: List<SubscribedPartition> = emptyList()
   private var danmuBlockKeywords: List<String> = emptyList()
   private var simpleModes: List<SimpleModeEntry> = emptyList()
+  private var rememberCategoryEnabled: Boolean = false
+  private var rememberedCategories: List<RememberedCategoryEntry> = emptyList()
+  private var accentColorHex: String = ""
 
   override fun loadThemeMode(): ThemeMode = themeMode
 
@@ -112,5 +130,23 @@ object InMemorySubscriptionStore : SubscriptionStore {
 
   override fun saveSimpleModeByPlatform(items: List<SimpleModeEntry>) {
     simpleModes = items.toList()
+  }
+
+  override fun loadRememberCategoryEnabled(): Boolean = rememberCategoryEnabled
+
+  override fun saveRememberCategoryEnabled(value: Boolean) {
+    rememberCategoryEnabled = value
+  }
+
+  override fun loadRememberedCategoryByPlatform(): List<RememberedCategoryEntry> = rememberedCategories
+
+  override fun saveRememberedCategoryByPlatform(items: List<RememberedCategoryEntry>) {
+    rememberedCategories = items.toList()
+  }
+
+  override fun loadAccentColorHex(): String = accentColorHex
+
+  override fun saveAccentColorHex(hex: String) {
+    accentColorHex = hex
   }
 }

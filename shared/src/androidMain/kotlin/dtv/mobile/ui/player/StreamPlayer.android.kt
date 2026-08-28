@@ -128,7 +128,19 @@ actual fun StreamPlayer(
   }
 
   DisposableEffect(player) {
-    onDispose { player.release() }
+    onDispose {
+      // Fully tear down the player when the player screen is closed / url changes.
+      // Stop playback first, drop the media items, then release all native resources
+      // (codecs, decoders, audio session, surface) so nothing lingers in the background.
+      AppLog.i("DTV-Player", "destroying player url=$url")
+      runCatching {
+        player.playWhenReady = false
+        player.stop()
+        player.clearMediaItems()
+        player.release()
+      }
+      AppLog.i("DTV-Player", "player destroyed url=$url")
+    }
   }
 
   AndroidView(
@@ -142,6 +154,13 @@ actual fun StreamPlayer(
         // Keep screen on during playback (some Android 16 devices will otherwise follow a short system timeout).
         keepScreenOn = true
         this.player = player
+      }
+    },
+    onRelease = { view ->
+      // Detach the player before the view is recycled so the composable-level
+      // release below is the only owner of the ExoPlayer lifecycle.
+      if (view.player === player) {
+        view.player = null
       }
     },
     update = { view ->

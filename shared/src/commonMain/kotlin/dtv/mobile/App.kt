@@ -19,7 +19,7 @@ fun App(
   subscriptionStore: SubscriptionStore = InMemorySubscriptionStore,
 ) {
   val appState = rememberAppState(repo = repo, subscriptionStore = subscriptionStore)
-  DtvTheme(themeMode = appState.themeMode) {
+  DtvTheme(themeMode = appState.themeMode, accentColorHex = appState.accentColorHex) {
     Surface(modifier = Modifier.fillMaxSize()) { DtvBackground { RootScaffold(appState = appState) } }
   }
 }

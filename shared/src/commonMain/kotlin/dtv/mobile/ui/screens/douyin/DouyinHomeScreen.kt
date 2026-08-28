@@ -121,11 +121,14 @@ fun DouyinHomeScreen(
     val data = appState.repo.fetchDouyinCategories()
     categories = data
 
-    val savedParts = appState.currentPartition
-      ?.takeIf { it.platform == Platform.Douyin }
-      ?.id
-      ?.split(':')
-      .orEmpty()
+    val savedId = if (appState.rememberCategoryEnabled) {
+      appState.rememberedCategoryId(Platform.Douyin)
+    } else {
+      appState.currentPartition
+        ?.takeIf { it.platform == Platform.Douyin }
+        ?.id
+    }
+    val savedParts = savedId?.split(':').orEmpty()
     val savedPartitionType = savedParts.getOrNull(1).orEmpty()
     val savedPartition = savedParts.getOrNull(2).orEmpty()
 
@@ -145,11 +148,13 @@ fun DouyinHomeScreen(
 
   LaunchedEffect(selectedCate2?.partition, selectedCate2?.partitionType) {
     if (selectedCate2 == null) return@LaunchedEffect
-    appState.currentPartition = SubscribedPartition(
+    val partition = SubscribedPartition(
       id = "douyin:${selectedCate2!!.partitionType}:${selectedCate2!!.partition}",
       name = selectedCate2!!.name,
       platform = Platform.Douyin,
     )
+    appState.currentPartition = partition
+    appState.saveRememberedCategory(platform = Platform.Douyin, id = partition.id)
     loadPage(reset = true)
     gridState.scrollToItem(0)
   }

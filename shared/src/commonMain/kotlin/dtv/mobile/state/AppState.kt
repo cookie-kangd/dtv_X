@@ -29,12 +29,15 @@ class AppState(
   var danmakuFontScale: Float by mutableStateOf(1.0f)
   var danmakuOpacity: Float by mutableStateOf(1.0f)
   var danmakuAreaFraction: Float by mutableStateOf(0.5f)
+  var rememberCategoryEnabled: Boolean by mutableStateOf(false)
+  var accentColorHex: String by mutableStateOf("")
   var platformSwitchLoading: Boolean by mutableStateOf(false)
   var selectedPlatform: Platform by mutableStateOf(Platform.Douyu)
   var currentScreen: Screen by mutableStateOf(Screen.Home)
   var currentStreamer: Streamer? by mutableStateOf(null)
   private var playerReturnScreen: Screen? by mutableStateOf(null)
   private var searchReturnScreen: Screen? by mutableStateOf(null)
+  private var settingsReturnScreen: Screen? by mutableStateOf(null)
   var playerFullscreen: Boolean by mutableStateOf(false)
   var currentPartition: SubscribedPartition? by mutableStateOf(null)
 
@@ -43,6 +46,7 @@ class AppState(
   val subscribedPartitions = mutableStateListOf<SubscribedPartition>()
   val danmuBlockKeywords = mutableStateListOf<String>()
   private val simpleModeByPlatform = mutableStateMapOf<Platform, Boolean>()
+  private val rememberedCategoryByPlatform = mutableStateMapOf<Platform, String>()
 
   init {
     themeMode = subscriptionStore.loadThemeMode()
@@ -54,9 +58,14 @@ class AppState(
     danmakuFontScale = subscriptionStore.loadDanmakuFontScale()
     danmakuOpacity = subscriptionStore.loadDanmakuOpacity()
     danmakuAreaFraction = subscriptionStore.loadDanmakuAreaFraction()
+    rememberCategoryEnabled = subscriptionStore.loadRememberCategoryEnabled()
+    accentColorHex = subscriptionStore.loadAccentColorHex()
 
     subscriptionStore.loadSimpleModeByPlatform().forEach { entry ->
       simpleModeByPlatform[entry.platform] = entry.enabled
+    }
+    subscriptionStore.loadRememberedCategoryByPlatform().forEach { entry ->
+      rememberedCategoryByPlatform[entry.platform] = entry.partitionId
     }
   }
 
@@ -145,6 +154,26 @@ class AppState(
     simpleModeByPlatform[p] = next
     val entries = simpleModeByPlatform.entries.map { (platform, enabled) -> SimpleModeEntry(platform = platform, enabled = enabled) }
     subscriptionStore.saveSimpleModeByPlatform(entries)
+  }
+
+  fun setRememberCategoryEnabled(enabled: Boolean) {
+    rememberCategoryEnabled = enabled
+    subscriptionStore.saveRememberCategoryEnabled(enabled)
+  }
+
+  fun rememberedCategoryId(platform: Platform): String? = rememberedCategoryByPlatform[platform]
+
+  fun saveRememberedCategory(platform: Platform, id: String) {
+    if (!rememberCategoryEnabled) return
+    if (id.isBlank()) return
+    rememberedCategoryByPlatform[platform] = id
+    val entries = rememberedCategoryByPlatform.entries.map { (p, pid) -> RememberedCategoryEntry(platform = p, partitionId = pid) }
+    subscriptionStore.saveRememberedCategoryByPlatform(entries)
+  }
+
+  fun setAccentColor(hex: String) {
+    accentColorHex = hex.trim()
+    subscriptionStore.saveAccentColorHex(accentColorHex)
   }
 
   suspend fun refreshFollowedLiveStatus() {
@@ -292,6 +321,11 @@ class AppState(
     currentScreen = Screen.Sync
   }
 
+  fun openSettings() {
+    settingsReturnScreen = currentScreen
+    currentScreen = Screen.Settings
+  }
+
   fun back() {
     when (currentScreen) {
       Screen.Home -> Unit
@@ -307,13 +341,17 @@ class AppState(
         searchReturnScreen = null
       }
       Screen.Sync -> currentScreen = Screen.Home
+      Screen.Settings -> {
+        currentScreen = settingsReturnScreen ?: Screen.Home
+        settingsReturnScreen = null
+      }
     }
   }
 }
 
 enum class ThemeMode { System, Light, Dark }
 
-enum class Screen { Home, Platform, Player, Search, Sync }
+enum class Screen { Home, Platform, Player, Search, Sync, Settings }
 
 @Composable
 fun rememberAppState(

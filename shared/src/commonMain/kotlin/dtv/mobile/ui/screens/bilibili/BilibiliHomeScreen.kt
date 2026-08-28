@@ -118,11 +118,14 @@ fun BilibiliHomeScreen(
     val data = appState.repo.fetchBilibiliCategories()
     categories = data
 
-    val savedParts = appState.currentPartition
-      ?.takeIf { it.platform == Platform.Bilibili }
-      ?.id
-      ?.split(':')
-      .orEmpty()
+    val savedId = if (appState.rememberCategoryEnabled) {
+      appState.rememberedCategoryId(Platform.Bilibili)
+    } else {
+      appState.currentPartition
+        ?.takeIf { it.platform == Platform.Bilibili }
+        ?.id
+    }
+    val savedParts = savedId?.split(':').orEmpty()
     val savedParentAreaId = savedParts.getOrNull(1)?.toIntOrNull()
     val savedAreaId = savedParts.getOrNull(2)?.toIntOrNull()
 
@@ -141,11 +144,13 @@ fun BilibiliHomeScreen(
 
   LaunchedEffect(selectedCate2?.parentAreaId, selectedCate2?.areaId) {
     if (selectedCate2 == null) return@LaunchedEffect
-    appState.currentPartition = SubscribedPartition(
+    val partition = SubscribedPartition(
       id = "bilibili:${selectedCate2!!.parentAreaId}:${selectedCate2!!.areaId}",
       name = selectedCate2!!.name,
       platform = Platform.Bilibili,
     )
+    appState.currentPartition = partition
+    appState.saveRememberedCategory(platform = Platform.Bilibili, id = partition.id)
     loadPage(reset = true)
     gridState.scrollToItem(0)
   }

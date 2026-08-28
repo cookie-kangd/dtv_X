@@ -64,6 +64,7 @@ fun DouyuHomeScreen(
   var selectedCate2: DouyuCate2? by remember { mutableStateOf(null) }
   var cate3List: List<DouyuCate3> by remember { mutableStateOf(emptyList()) }
   var selectedCate3: DouyuCate3? by remember { mutableStateOf(null) }
+  var pendingCate3Id by remember { mutableStateOf<String?>(null) }
 
   var rooms: List<Streamer> by remember { mutableStateOf(emptyList()) }
   var loading by remember { mutableStateOf(true) }
@@ -82,17 +83,21 @@ fun DouyuHomeScreen(
     val data = appState.repo.fetchDouyuCategories()
     categories = data.cate1List
 
-    val savedParts = appState.currentPartition
-      ?.takeIf { it.platform == Platform.Douyu }
-      ?.id
-      ?.split(':')
-      .orEmpty()
+    val savedId = if (appState.rememberCategoryEnabled) {
+      appState.rememberedCategoryId(Platform.Douyu)
+    } else {
+      appState.currentPartition
+        ?.takeIf { it.platform == Platform.Douyu }
+        ?.id
+    }
+    val savedParts = savedId?.split(':').orEmpty()
     val savedType = savedParts.getOrNull(1).orEmpty()
-    val savedId = savedParts.getOrNull(2).orEmpty()
+    val savedC2Id = savedParts.getOrNull(2).orEmpty()
+    pendingCate3Id = if (savedType == "c2" && savedParts.getOrNull(3) == "c3") savedParts.getOrNull(4) else null
 
-    val savedCate2 = if (savedType == "c2" && savedId.isNotBlank()) {
+    val savedCate2 = if (savedType == "c2" && savedC2Id.isNotBlank()) {
       data.cate1List.asSequence().mapNotNull { c1 ->
-        val c2 = c1.cate2List.firstOrNull { it.id == savedId }
+        val c2 = c1.cate2List.firstOrNull { it.id == savedC2Id }
         c2?.let { c1 to it }
       }.firstOrNull()
     } else {
@@ -107,7 +112,11 @@ fun DouyuHomeScreen(
   LaunchedEffect(selectedCate2?.id) {
     val cate2Id = selectedCate2?.id ?: return@LaunchedEffect
     cate3List = appState.repo.fetchDouyuThreeCate(cate2Id)
-    selectedCate3 = null
+    val restoredCate3 = pendingCate3Id
+      ?.takeIf { it.isNotBlank() }
+      ?.let { id -> cate3List.firstOrNull { it.id == id } }
+    pendingCate3Id = null
+    selectedCate3 = restoredCate3
   }
 
   suspend fun loadPage(reset: Boolean) {
@@ -153,7 +162,7 @@ fun DouyuHomeScreen(
 
   LaunchedEffect(selectedCate2?.id, selectedCate3?.id) {
     if (selectedCate2 == null) return@LaunchedEffect
-    appState.currentPartition = when {
+    val partition = when {
       selectedCate3 != null -> SubscribedPartition(
         id = "douyu:c3:${selectedCate3!!.id}",
         name = selectedCate3!!.name,
@@ -165,6 +174,13 @@ fun DouyuHomeScreen(
         platform = Platform.Douyu,
       )
     }
+    appState.currentPartition = partition
+    val rememberedId = if (selectedCate3 != null) {
+      "douyu:c2:${selectedCate2!!.id}:c3:${selectedCate3!!.id}"
+    } else {
+      "douyu:c2:${selectedCate2!!.id}"
+    }
+    appState.saveRememberedCategory(platform = Platform.Douyu, id = rememberedId)
     // small debounce to avoid double refresh when cate2 -> cate3 list updates
     delay(60)
     loadPage(reset = true)

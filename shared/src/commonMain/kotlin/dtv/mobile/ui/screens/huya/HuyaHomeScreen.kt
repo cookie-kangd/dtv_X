@@ -112,11 +112,17 @@ fun HuyaHomeScreen(
     val data = appState.repo.fetchHuyaCategories()
     categories = data
 
-    val savedGid = appState.currentPartition
-      ?.takeIf { it.platform == Platform.Huya }
-      ?.id
-      ?.substringAfter("huya:", missingDelimiterValue = "")
-      ?.takeIf { it.isNotBlank() }
+    val savedGid = if (appState.rememberCategoryEnabled) {
+      appState.rememberedCategoryId(Platform.Huya)
+        ?.substringAfter("huya:", missingDelimiterValue = "")
+        ?.takeIf { it.isNotBlank() }
+    } else {
+      appState.currentPartition
+        ?.takeIf { it.platform == Platform.Huya }
+        ?.id
+        ?.substringAfter("huya:", missingDelimiterValue = "")
+        ?.takeIf { it.isNotBlank() }
+    }
 
     val saved = savedGid?.let { gid ->
       data.asSequence().mapNotNull { c1 ->
@@ -131,11 +137,13 @@ fun HuyaHomeScreen(
 
   LaunchedEffect(selectedCate2?.gid) {
     if (selectedCate2 == null) return@LaunchedEffect
-    appState.currentPartition = SubscribedPartition(
+    val partition = SubscribedPartition(
       id = "huya:${selectedCate2!!.gid}",
       name = selectedCate2!!.name,
       platform = Platform.Huya,
     )
+    appState.currentPartition = partition
+    appState.saveRememberedCategory(platform = Platform.Huya, id = partition.id)
     loadPage(reset = true)
     gridState.scrollToItem(0)
   }

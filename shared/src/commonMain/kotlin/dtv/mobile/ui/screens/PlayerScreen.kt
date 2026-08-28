@@ -1119,7 +1119,7 @@ private fun DanmakuBubble(
     if (showUser) {
       withStyle(
         SpanStyle(
-          color = Color(0xFFFFE082).copy(alpha = 0.92f * effectiveOpacity),
+          color = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f * effectiveOpacity),
           fontWeight = FontWeight.SemiBold,
         ),
       ) {
