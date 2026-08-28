@@ -55,6 +55,9 @@ interface SubscriptionStore {
 
   fun loadAccentColorHex(): String
   fun saveAccentColorHex(hex: String)
+
+  fun loadCompactCardEnabled(): Boolean
+  fun saveCompactCardEnabled(value: Boolean)
 }
 
 object InMemorySubscriptionStore : SubscriptionStore {
@@ -71,6 +74,7 @@ object InMemorySubscriptionStore : SubscriptionStore {
   private var rememberCategoryEnabled: Boolean = true
   private var rememberedCategories: List<RememberedCategoryEntry> = emptyList()
   private var accentColorHex: String = ""
+  private var compactCardEnabled: Boolean = true
 
   override fun loadThemeMode(): ThemeMode = themeMode
 
@@ -148,5 +152,11 @@ object InMemorySubscriptionStore : SubscriptionStore {
 
   override fun saveAccentColorHex(hex: String) {
     accentColorHex = hex
+  }
+
+  override fun loadCompactCardEnabled(): Boolean = compactCardEnabled
+
+  override fun saveCompactCardEnabled(value: Boolean) {
+    compactCardEnabled = value
   }
 }

@@ -30,6 +30,7 @@ class AppState(
   var danmakuOpacity: Float by mutableStateOf(1.0f)
   var danmakuAreaFraction: Float by mutableStateOf(0.5f)
   var rememberCategoryEnabled: Boolean by mutableStateOf(true)
+  var compactCardEnabled: Boolean by mutableStateOf(true)
   var accentColorHex: String by mutableStateOf("")
   var platformSwitchLoading: Boolean by mutableStateOf(false)
   var selectedPlatform: Platform by mutableStateOf(Platform.Douyu)
@@ -59,6 +60,7 @@ class AppState(
     danmakuOpacity = subscriptionStore.loadDanmakuOpacity()
     danmakuAreaFraction = subscriptionStore.loadDanmakuAreaFraction()
     rememberCategoryEnabled = subscriptionStore.loadRememberCategoryEnabled()
+    compactCardEnabled = subscriptionStore.loadCompactCardEnabled()
     accentColorHex = subscriptionStore.loadAccentColorHex()
 
     subscriptionStore.loadSimpleModeByPlatform().forEach { entry ->
@@ -179,6 +181,11 @@ class AppState(
   fun setAccentColor(hex: String) {
     accentColorHex = hex.trim()
     subscriptionStore.saveAccentColorHex(accentColorHex)
+  }
+
+  fun updateCompactCardEnabled(enabled: Boolean) {
+    compactCardEnabled = enabled
+    subscriptionStore.saveCompactCardEnabled(enabled)
   }
 
   suspend fun refreshFollowedLiveStatus() {

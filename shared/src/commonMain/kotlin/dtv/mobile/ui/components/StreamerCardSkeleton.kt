@@ -34,7 +34,9 @@ fun StreamerCardSkeleton(
   modifier: Modifier = Modifier,
 ) {
   val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-  val shape = RoundedCornerShape(32.dp)
+  val metrics = LocalCardMetrics.current
+  val compact = metrics.compact
+  val shape = RoundedCornerShape(if (compact) 20.dp else 32.dp)
   val borderColor = if (isDark) Color.White.copy(alpha = 0.08f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
   val base = if (isDark) Color.White.copy(alpha = 0.06f) else Color.Black.copy(alpha = 0.06f)
   val highlight = if (isDark) Color.White.copy(alpha = 0.14f) else Color.Black.copy(alpha = 0.12f)
@@ -70,34 +72,34 @@ fun StreamerCardSkeleton(
       Box(
         modifier = Modifier
           .fillMaxWidth()
-          .aspectRatio(16f / 10f)
+          .aspectRatio(metrics.coverRatio)
           .background(shimmer),
       ) {
         Box(
           modifier = Modifier
-            .padding(12.dp)
-            .size(width = 56.dp, height = 22.dp)
+            .padding(if (compact) 7.dp else 12.dp)
+            .size(width = if (compact) 42.dp else 56.dp, height = if (compact) 16.dp else 22.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(shimmer),
         )
       }
 
       Column(
-        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(horizontal = if (compact) 10.dp else 14.dp, vertical = if (compact) 7.dp else 10.dp),
+        verticalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 8.dp),
       ) {
         Box(
           modifier = Modifier
             .fillMaxWidth()
-            .height(14.dp)
+            .height(if (compact) 11.dp else 14.dp)
             .clip(RoundedCornerShape(6.dp))
             .background(shimmer),
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 8.dp)) {
           Box(
             modifier = Modifier
-              .size(20.dp)
+              .size(if (compact) 14.dp else 20.dp)
               .clip(CircleShape)
               .background(shimmer),
           )

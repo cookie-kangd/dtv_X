@@ -44,6 +44,8 @@ fun HomeStreamerCard(
   followed: Boolean = false,
   onToggleFollow: (() -> Unit)? = null,
 ) {
+  val metrics = LocalCardMetrics.current
+  val compact = metrics.compact
   val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
   val bg = if (isDark) Color(0xFF121212) else MaterialTheme.colorScheme.surface
   val border = if (isDark) Color.White.copy(alpha = 0.10f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)
@@ -57,14 +59,14 @@ fun HomeStreamerCard(
     modifier = modifier
       .fillMaxWidth()
       .clickable(onClick = onClick),
-    verticalArrangement = Arrangement.spacedBy(10.dp),
+    verticalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 10.dp),
   ) {
     Box(modifier = Modifier.fillMaxWidth()) {
-      val mediaShape = RoundedCornerShape(32.dp)
+      val mediaShape = RoundedCornerShape(if (compact) 20.dp else 32.dp)
       Surface(
         modifier = Modifier
           .fillMaxWidth()
-          .aspectRatio(4f / 3f)
+          .aspectRatio(metrics.coverRatio)
           .clip(mediaShape),
         shape = mediaShape,
         color = bg,
@@ -74,12 +76,12 @@ fun HomeStreamerCard(
       ) {
         Box(modifier = Modifier.fillMaxWidth()) {
           if (cover != null) {
-            NetworkImage(url = cover, contentDescription = streamer.title, modifier = Modifier.fillMaxWidth().aspectRatio(4f / 3f))
+            NetworkImage(url = cover, contentDescription = streamer.title, modifier = Modifier.fillMaxWidth().aspectRatio(metrics.coverRatio))
             if (offline) {
               Box(modifier = Modifier.matchParentSize().background(offlineOverlay))
             }
           } else {
-            Box(modifier = Modifier.fillMaxWidth().aspectRatio(4f / 3f), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxWidth().aspectRatio(metrics.coverRatio), contentAlignment = Alignment.Center) {
               Text(text = streamer.name.take(1), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
             }
           }
@@ -99,8 +101,8 @@ fun HomeStreamerCard(
         Surface(
           modifier = Modifier
             .align(Alignment.TopEnd)
-            .padding(end = 12.dp, top = 12.dp),
-          shape = RoundedCornerShape(10.dp),
+            .padding(end = if (compact) 7.dp else 12.dp, top = if (compact) 7.dp else 12.dp),
+          shape = RoundedCornerShape(metrics.badgeCorner),
           color = Color.Black.copy(alpha = 0.40f),
           border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.10f)),
           tonalElevation = 0.dp,
@@ -108,9 +110,9 @@ fun HomeStreamerCard(
         ) {
           Text(
             text = formatViewerCountWanIfNeeded(streamer.viewerText),
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black, fontSize = 10.sp),
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black, fontSize = metrics.viewerSize),
             color = Color.White,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            modifier = Modifier.padding(horizontal = if (compact) 5.dp else 8.dp, vertical = if (compact) 2.dp else 4.dp),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
           )
@@ -121,15 +123,15 @@ fun HomeStreamerCard(
     Box(modifier = Modifier.fillMaxWidth()) {
       Box(
         modifier = Modifier
-          .padding(start = 14.dp)
-          .offset(y = (-20).dp)
-          .size(44.dp),
+          .padding(start = if (compact) 10.dp else 14.dp)
+          .offset(y = if (compact) (-14).dp else (-20).dp)
+          .size(if (compact) 32.dp else 44.dp),
       ) {
         Surface(
           modifier = Modifier
             .matchParentSize()
-            .clip(RoundedCornerShape(18.dp)),
-          shape = RoundedCornerShape(18.dp),
+            .clip(RoundedCornerShape(if (compact) 13.dp else 18.dp)),
+          shape = RoundedCornerShape(if (compact) 13.dp else 18.dp),
           color = MaterialTheme.colorScheme.background,
           tonalElevation = 0.dp,
           shadowElevation = 0.dp,
@@ -151,7 +153,7 @@ fun HomeStreamerCard(
           modifier = Modifier
             .align(Alignment.BottomEnd)
             .offset(x = 1.dp, y = 1.dp)
-            .size(12.dp)
+            .size(if (compact) 10.dp else 12.dp)
             .clip(CircleShape)
             .background(if (streamer.isLive) accent else Color(0xFF9CA3AF))
             .border(width = 2.dp, color = MaterialTheme.colorScheme.background, shape = CircleShape),
@@ -161,7 +163,7 @@ fun HomeStreamerCard(
       Column(
         modifier = Modifier
           .fillMaxWidth()
-          .padding(start = 72.dp, top = 0.dp)
+          .padding(start = if (compact) 48.dp else 72.dp, top = 0.dp)
           .offset(y = (-2).dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
       ) {

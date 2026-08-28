@@ -43,6 +43,7 @@ import dtv.mobile.repo.DouyinCate2
 import dtv.mobile.repo.PagedResult
 import dtv.mobile.state.AppState
 import dtv.mobile.state.SubscribedPartition
+import dtv.mobile.ui.components.LocalCardMetrics
 import dtv.mobile.ui.components.CategoryPill
 import dtv.mobile.ui.components.LazyGridLoadMoreEffect
 import dtv.mobile.ui.components.PullToRefreshBox
@@ -80,6 +81,7 @@ fun DouyinHomeScreen(
   var refreshing by remember { mutableStateOf(false) }
 
   val gridState = rememberLazyGridState()
+  val cardMetrics = LocalCardMetrics.current
   val scope = rememberCoroutineScope()
 
   suspend fun loadPage(reset: Boolean) {
@@ -272,10 +274,10 @@ fun DouyinHomeScreen(
       LazyVerticalGrid(
         modifier = Modifier.fillMaxSize(),
         state = gridState,
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Fixed(cardMetrics.columns),
         contentPadding = PaddingValues(bottom = 0.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(cardMetrics.gridSpacing),
+        horizontalArrangement = Arrangement.spacedBy(cardMetrics.gridSpacing),
       ) {
         if (loading || appState.platformSwitchLoading) {
           items(6, span = { GridItemSpan(1) }) {

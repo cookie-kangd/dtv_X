@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import dtv.mobile.state.AppState
+import dtv.mobile.ui.components.LocalCardMetrics
 import dtv.mobile.ui.components.HomeStreamerCard
 import dtv.mobile.ui.components.NetworkImage
 import dtv.mobile.ui.components.PullToRefreshBox
@@ -97,6 +98,7 @@ fun HomeScreen(
   var refreshing by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
   val gridState = rememberLazyGridState()
+  val cardMetrics = LocalCardMetrics.current
 
   var draggingKey by remember { mutableStateOf<String?>(null) }
   var dragOffset by remember { mutableStateOf(Offset.Zero) }
@@ -128,10 +130,10 @@ fun HomeScreen(
     LazyVerticalGrid(
       modifier = Modifier.fillMaxSize(),
       state = gridState,
-      columns = GridCells.Fixed(2),
+      columns = GridCells.Fixed(cardMetrics.columns),
       contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 92.dp),
-      horizontalArrangement = Arrangement.spacedBy(16.dp),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      horizontalArrangement = Arrangement.spacedBy(if (cardMetrics.compact) 10.dp else 16.dp),
+      verticalArrangement = Arrangement.spacedBy(if (cardMetrics.compact) 10.dp else 14.dp),
     ) {
       item(span = { GridItemSpan(2) }) {
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {

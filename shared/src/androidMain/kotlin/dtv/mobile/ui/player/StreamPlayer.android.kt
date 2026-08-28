@@ -47,6 +47,110 @@ private object PlayerCacheHolder {
   }
 }
 
+/**
+ * 播放器可选增强配置：音频焦点、耳机断开暂停、GPU 友好缩放。
+ * 逐项 try/catch，任何一项失败都不会影响正常起播。
+ *
+ * 明确不做的事：
+ * - 不调用 setWakeMode(...)：它需要 android.permission.WAKE_LOCK，
+ *   缺权限时会在起播获取锁的瞬间抛 SecurityException 直接闪退；
+ *   PlayerView 的 keepScreenOn 已能保证播放期间屏幕常亮，无需唤醒锁。
+ */
+private fun ExoPlayer.applyOptionalPlayerConfig() {
+  runCatching {
+    // 音频焦点：来电/其他媒体播放时自动让出，避免声音叠加
+    setAudioAttributes(
+      AudioAttributes.Builder()
+        .setUsage(C.USAGE_MEDIA)
+        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+        .build(),
+      true,
+    )
+  }.onFailure { AppLog.w("DTV-Player", "setAudioAttributes failed: ${it.message}") }
+
+  runCatching {
+    // 耳机断开等"噪音"场景自动暂停，避免继续解码耗电
+    setHandleAudioBecomingNoisy(true)
+  }.onFailure { AppLog.w("DTV-Player", "setHandleAudioBecomingNoisy failed: ${it.message}") }
+
+  runCatching {
+    // GPU 友好的缩放模式，降低渲染开销
+    videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
+  }.onFailure { AppLog.w("DTV-Player", "setVideoScalingMode failed: ${it.message}") }
+}
+
+/** 构建带全部优化配置的播放器；调用方负责兜底异常。 */
+private fun buildPlayer(
+  context: Context,
+  url: String,
+  liveMode: Boolean,
+): ExoPlayer {
+  val headers = buildMap {
+    put(
+      "User-Agent",
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    )
+    val u = url.lowercase()
+    when {
+      "huya" in u -> put("Referer", "https://www.huya.com/")
+      "bilibili" in u -> put("Referer", "https://live.bilibili.com/")
+      "douyin" in u -> put("Referer", "https://live.douyin.com/")
+      "douyu" in u -> put("Referer", "https://www.douyu.com/")
+    }
+  }
+
+  val httpFactory = DefaultHttpDataSource.Factory()
+    .setAllowCrossProtocolRedirects(true)
+    .setDefaultRequestProperties(headers)
+
+  // 直播走纯网络源（避免磁盘缓存带来的延迟与空间占用）；点播/回放启用 128MB 磁盘缓存。
+  // 缓存初始化失败时回退到纯网络源，绝不影响起播。
+  val dataSourceFactory = if (liveMode) {
+    httpFactory
+  } else {
+    runCatching {
+      CacheDataSource.Factory()
+        .setCache(PlayerCacheHolder.get(context.applicationContext))
+        .setUpstreamDataSourceFactory(httpFactory)
+        .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+    }.getOrElse {
+      AppLog.w("DTV-Player", "disk cache unavailable, fallback to http: ${it.message}")
+      httpFactory
+    }
+  }
+
+  // 缓冲策略：直播偏小（降低延迟、快速起播），点播偏大（抗网络抖动）。
+  val loadControl = if (liveMode) {
+    DefaultLoadControl.Builder()
+      .setBufferDurationsMs(12_000, 24_000, 1_500, 3_000)
+      .setPrioritizeTimeOverSizeThresholds(true)
+      .build()
+  } else {
+    DefaultLoadControl.Builder()
+      .setBufferDurationsMs(30_000, 60_000, 2_500, 5_000)
+      .setPrioritizeTimeOverSizeThresholds(true)
+      .build()
+  }
+
+  // 限制最大解码分辨率，避免超高码率流占用过多内存导致 OOM / 掉帧。
+  val trackSelector = DefaultTrackSelector(context).apply {
+    setParameters(buildUponParameters().setMaxVideoSize(1920, 1080))
+  }
+
+  return ExoPlayer.Builder(context)
+    .setMediaSourceFactory(DefaultMediaSourceFactory(context).setDataSourceFactory(dataSourceFactory))
+    .setLoadControl(loadControl)
+    .setTrackSelector(trackSelector)
+    .build()
+    .apply {
+      applyOptionalPlayerConfig()
+
+      setMediaItem(MediaItem.fromUri(Uri.parse(url)))
+      playWhenReady = true
+      prepare()
+    }
+}
+
 @Composable
 actual fun StreamPlayer(
   url: String,
@@ -58,77 +162,17 @@ actual fun StreamPlayer(
   modifier: Modifier,
 ) {
   val context = LocalContext.current
+  // 兜底：构建播放器的任何一步失败都不允许把 App 带崩，
+  // 失败时降级为"零可选配置"的最简播放器继续起播。
   val player = remember(url) {
-    val headers = buildMap {
-      put(
-        "User-Agent",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-      )
-      val u = url.lowercase()
-      when {
-        "huya" in u -> put("Referer", "https://www.huya.com/")
-        "bilibili" in u -> put("Referer", "https://live.bilibili.com/")
-        "douyin" in u -> put("Referer", "https://live.douyin.com/")
-        "douyu" in u -> put("Referer", "https://www.douyu.com/")
-      }
-    }
-
-    val httpFactory = DefaultHttpDataSource.Factory()
-      .setAllowCrossProtocolRedirects(true)
-      .setDefaultRequestProperties(headers)
-
-    // 直播走纯网络源（避免磁盘缓存带来的延迟与空间占用）；点播/回放启用 128MB 磁盘缓存。
-    val dataSourceFactory = if (liveMode) {
-      httpFactory
-    } else {
-      CacheDataSource.Factory()
-        .setCache(PlayerCacheHolder.get(context.applicationContext))
-        .setUpstreamDataSourceFactory(httpFactory)
-        .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
-    }
-
-    // 缓冲策略：直播偏小（降低延迟、快速起播），点播偏大（抗网络抖动）。
-    val loadControl = if (liveMode) {
-      DefaultLoadControl.Builder()
-        .setBufferDurationsMs(12_000, 24_000, 1_500, 3_000)
-        .setPrioritizeTimeOverSizeThresholds(true)
-        .build()
-    } else {
-      DefaultLoadControl.Builder()
-        .setBufferDurationsMs(30_000, 60_000, 2_500, 5_000)
-        .setPrioritizeTimeOverSizeThresholds(true)
-        .build()
-    }
-
-    // 限制最大解码分辨率，避免超高码率流占用过多内存导致 OOM / 掉帧。
-    val trackSelector = DefaultTrackSelector(context).apply {
-      setParameters(buildUponParameters().setMaxVideoSize(1920, 1080))
-    }
-
-    ExoPlayer.Builder(context)
-      .setMediaSourceFactory(DefaultMediaSourceFactory(context).setDataSourceFactory(dataSourceFactory))
-      .setLoadControl(loadControl)
-      .setTrackSelector(trackSelector)
-      .build()
-      .apply {
-        // 音频焦点：接入电话/其他媒体时自动让出，避免声音叠加
-        setAudioAttributes(
-          AudioAttributes.Builder()
-            .setUsage(C.USAGE_MEDIA)
-            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
-            .build(),
-          true,
-        )
-        // 耳机断开等"噪音"场景自动暂停，避免后台继续解码耗电
-        setHandleAudioBecomingNoisy(true)
-        // 使用 GPU 友好的缩放模式，降低渲染开销
-        videoScalingMode = C.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING
-        // 播放期间保持网络唤醒，避免息屏后被系统断流
-        setWakeMode(C.WAKE_MODE_NETWORK)
-
-        setMediaItem(MediaItem.fromUri(Uri.parse(url)))
-        playWhenReady = true
-        prepare()
+    runCatching { buildPlayer(context = context, url = url, liveMode = liveMode) }
+      .getOrElse { t ->
+        AppLog.e("DTV-Player", "build player failed, fallback to minimal player: url=$url", t)
+        ExoPlayer.Builder(context).build().apply {
+          setMediaItem(MediaItem.fromUri(Uri.parse(url)))
+          playWhenReady = true
+          prepare()
+        }
       }
   }
 

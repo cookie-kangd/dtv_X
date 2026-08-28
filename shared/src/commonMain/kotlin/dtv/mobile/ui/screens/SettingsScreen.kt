@@ -406,6 +406,27 @@ private fun BasicSettingsSection(
       }
     }
 
+    // 小卡片模式（默认开启）
+    SettingsCard {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+          Text("小卡片模式", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+          Text(
+            text = "开启后直播间卡片变小、首页与平台页切换到 3 列，一屏可展示更多直播间；关闭则恢复 2 列大卡片。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+          )
+        }
+        Switch(
+          checked = appState.compactCardEnabled,
+          onCheckedChange = appState::updateCompactCardEnabled,
+        )
+      }
+    }
+
     // 主题模式（亮色 / 暗色 / 跟随系统）
     SettingsCard {
       Text("主题模式", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))

@@ -64,8 +64,9 @@ fun StreamerCard(
     return
   }
 
-  val shape = RoundedCornerShape(18.dp)
-  val coverRatio = 16f / 10f
+  val metrics = LocalCardMetrics.current
+  val shape = RoundedCornerShape(metrics.cornerRadius)
+  val coverRatio = metrics.coverRatio
   val cover = normalizeHttpUrl(streamer.coverUrl) ?: normalizeHttpUrl(streamer.avatarUrl)
   val offline = !streamer.isLive
   val offlineOverlay = Color(0xFF9CA3AF).copy(alpha = 0.35f)
@@ -130,8 +131,8 @@ fun StreamerCard(
           Surface(
             modifier = Modifier
               .align(Alignment.TopEnd)
-              .padding(10.dp),
-            shape = RoundedCornerShape(8.dp),
+              .padding(metrics.badgeInsetPadding),
+            shape = RoundedCornerShape(metrics.badgeCorner),
             color = Color.Black.copy(alpha = 0.40f),
             border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
             tonalElevation = 0.dp,
@@ -144,7 +145,7 @@ fun StreamerCard(
             ) {
               Text(
                 text = formatViewerCountWanIfNeeded(streamer.viewerText),
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black, fontSize = 10.sp),
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black, fontSize = metrics.viewerSize),
                 color = Color.White,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -155,22 +156,22 @@ fun StreamerCard(
       }
 
       Column(
-        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.padding(horizontal = metrics.contentPaddingH, vertical = metrics.contentPaddingV),
+        verticalArrangement = Arrangement.spacedBy(metrics.contentSpacing),
       ) {
         Text(
           text = streamer.title,
-          style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Black),
+          style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Black, fontSize = metrics.titleSize),
           color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.92f),
           maxLines = 1,
           overflow = TextOverflow.Ellipsis,
         )
 
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(metrics.infoSpacing)) {
           val avatar = normalizeHttpUrl(streamer.avatarUrl)
           Box(
             modifier = Modifier
-              .size(18.dp)
+              .size(metrics.avatarSize)
               .clip(CircleShape)
               .background(if (isDark) Color.White.copy(alpha = 0.10f) else MaterialTheme.colorScheme.secondary),
             contentAlignment = Alignment.Center,
@@ -187,7 +188,7 @@ fun StreamerCard(
 
           Text(
             text = streamer.name,
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = metrics.nameSize),
             color = if (isDark) Color(0xFF9CA3AF) else Color(0xFF6B7280),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

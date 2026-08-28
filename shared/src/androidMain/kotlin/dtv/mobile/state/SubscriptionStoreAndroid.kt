@@ -129,4 +129,11 @@ class SubscriptionStoreAndroid(
   override fun saveAccentColorHex(hex: String) {
     prefs.edit().putString("accent_color_hex", hex).apply()
   }
+
+  // 小卡片模式默认开启
+  override fun loadCompactCardEnabled(): Boolean = prefs.getBoolean("compact_card_enabled", true)
+
+  override fun saveCompactCardEnabled(value: Boolean) {
+    prefs.edit().putBoolean("compact_card_enabled", value).apply()
+  }
 }
