@@ -17,6 +17,9 @@ jobs:
   build:
     name: Build APK
     runs-on: ubuntu-latest
+    env:
+      # 应用版本号（需与 androidApp/build.gradle.kts 的 versionName 保持一致）
+      APP_VERSION: "0.1"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -54,18 +57,26 @@ jobs:
           DTV_NO_ALIYUN_MIRROR: "true"
         run: ./gradlew :androidApp:assembleRelease --no-daemon --stacktrace
 
-      - name: Collect APK
+      - name: Rename APK
         id: apk
         run: |
           APK=$(find androidApp/build/outputs/apk -name "*.apk" | head -n 1)
-          echo "apk_path=$APK" >> "$GITHUB_OUTPUT"
-          echo "apk_name=$(basename "$APK")" >> "$GITHUB_OUTPUT"
+          if [ -z "$APK" ]; then
+            echo "::error::未找到构建产物 APK"
+            exit 1
+          fi
+          # 发布产物统一命名为 dtv-X-<版本号>.apk（应用内更新会按 .apk 资源匹配）
+          ASSET_NAME="dtv-X-${APP_VERSION}.apk"
+          mkdir -p out
+          cp "$APK" "out/$ASSET_NAME"
+          echo "apk_path=out/$ASSET_NAME" >> "$GITHUB_OUTPUT"
+          echo "apk_name=$ASSET_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: dtv-mobile-apk
-          path: androidApp/build/outputs/apk/release/*.apk
+          name: dtv-X-apk
+          path: out/*.apk
           if-no-files-found: error
 
       - name: Create Release
@@ -73,7 +84,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          VERSION="0.1"
+          VERSION="$APP_VERSION"
           TAG="v${VERSION}"
           # 同名 release 已存在时先删除，保证 tag 始终指向最新一次构建的 APK
           if gh release view "$TAG" >/dev/null 2>&1; then
@@ -87,6 +98,5 @@ jobs:
           } > release_body.md
           gh release create "$TAG" \
             "${{ steps.apk.outputs.apk_path }}" \
-            --title "DTV Mobile v${VERSION}" \
-            --notes-file release_body.md \
-            || echo "::warning::Release creation skipped (tag may already exist)"
+            --title "DTV X v${VERSION}" \
+            --notes-file release_body.md

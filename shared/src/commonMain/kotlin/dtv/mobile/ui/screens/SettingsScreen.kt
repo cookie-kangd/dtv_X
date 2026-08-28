@@ -24,12 +24,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Devices
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -50,6 +54,9 @@ import androidx.compose.ui.unit.dp
 import dtv.mobile.state.AppState
 import dtv.mobile.state.ThemeMode
 import dtv.mobile.ui.system.PlatformBackHandler
+import dtv.mobile.update.AppUpdateInfo
+import dtv.mobile.update.UpdateState
+import dtv.mobile.update.rememberUpdateManager
 
 private enum class SettingsSection { Root, Basic, Sync }
 
@@ -119,6 +126,158 @@ private fun SettingsRoot(
       subtitle = "局域网共享 / 导入关注、分区与屏蔽词",
       onClick = onOpenSync,
     )
+    UpdateCheckerCard()
+  }
+}
+
+@Composable
+private fun UpdateCheckerCard(
+  modifier: Modifier = Modifier,
+) {
+  val updateManager = rememberUpdateManager()
+  val state = updateManager.state
+  var expanded by remember { mutableStateOf(false) }
+  val currentVersion = updateManager.currentVersionName
+
+  Column(modifier = modifier.fillMaxWidth()) {
+    SettingsItemRow(
+      icon = { Icon(imageVector = Icons.Default.Download, contentDescription = null) },
+      title = "检查更新",
+      subtitle = if (currentVersion.isBlank()) "检查 GitHub Release 是否有新版本" else "当前版本 v$currentVersion",
+      onClick = {
+        expanded = true
+        updateManager.check()
+      },
+    )
+
+    if (expanded) {
+      Surface(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = 6.dp, vertical = 2.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.14f)),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+      ) {
+        Column(
+          modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+          verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+          when (state) {
+            UpdateState.Idle -> Unit
+            UpdateState.Checking -> UpdateStatusText(text = "正在检查更新…")
+            UpdateState.UpToDate -> UpdateStatusText(
+              text = "已是最新版本（v$currentVersion）",
+              positive = true,
+            )
+            is UpdateState.Available -> UpdateAvailableBlock(
+              info = state.info,
+              onDownload = { updateManager.download(state.info) },
+            )
+            is UpdateState.Downloading -> {
+              val percent = (state.progress * 100).toInt()
+              UpdateStatusText(text = "正在下载新版本… $percent%")
+              UpdateProgressBar(progress = state.progress)
+            }
+            is UpdateState.Downloaded -> UpdateStatusText(text = "下载完成，正在唤起安装…", positive = true)
+            is UpdateState.Failed -> {
+              UpdateStatusText(text = state.message, positive = false)
+              OutlinedButton(onClick = { updateManager.check() }) {
+                Icon(imageVector = Icons.Default.Refresh, contentDescription = null)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("重试")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+@Composable
+private fun UpdateStatusText(
+  text: String,
+  positive: Boolean? = null,
+) {
+  val color = when (positive) {
+    true -> Color(0xFF16A34A)
+    false -> Color(0xFFDC2626)
+    null -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+  }
+  Text(
+    text = text,
+    style = MaterialTheme.typography.bodyMedium,
+    color = color,
+  )
+}
+
+@Composable
+private fun UpdateProgressBar(progress: Float) {
+  Box(
+    modifier = Modifier
+      .fillMaxWidth()
+      .height(6.dp)
+      .clip(RoundedCornerShape(3.dp))
+      .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)),
+  ) {
+    Box(
+      modifier = Modifier
+        .fillMaxWidth(progress.coerceIn(0f, 1f))
+        .height(6.dp)
+        .background(MaterialTheme.colorScheme.primary),
+    )
+  }
+}
+
+@Composable
+private fun UpdateAvailableBlock(
+  info: AppUpdateInfo,
+  onDownload: () -> Unit,
+) {
+  // commonMain 不可使用 String.format，这里手动保留一位小数
+  val sizeText = if (info.sizeBytes > 0) {
+    val mb = (info.sizeBytes / 1048576.0 * 10.0).toLong() / 10.0
+    "$mb MB"
+  } else {
+    ""
+  }
+
+  Text(
+    text = "发现新版本 v${info.versionName}",
+    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+    color = MaterialTheme.colorScheme.primary,
+  )
+  Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    if (sizeText.isNotBlank()) {
+      Text(
+        text = sizeText,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+      )
+    }
+    if (info.publishedAt.isNotBlank()) {
+      Text(
+        text = info.publishedAt.replace("T", " ").removeSuffix("Z"),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+      )
+    }
+  }
+  if (info.notes.isNotBlank()) {
+    Text(
+      text = info.notes.take(300),
+      style = MaterialTheme.typography.bodySmall,
+      color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+      maxLines = 6,
+    )
+  }
+  Button(onClick = onDownload) {
+    Icon(imageVector = Icons.Default.Download, contentDescription = null)
+    Spacer(modifier = Modifier.width(6.dp))
+    Text("下载并安装")
   }
 }
 
