@@ -91,9 +91,10 @@ jobs:
             echo "existing release $TAG found, replacing it"
             gh release delete "$TAG" --yes
           fi
-          # release delete 不会删除同名 tag，这里显式清理，
-          # 保证下面创建 release 时新建的 tag 指向本次构建对应的 commit
-          git push --delete origin "refs/tags/$TAG" 2>/dev/null || echo "remote tag $TAG absent, skip"
+          # release delete 不会删除同名 tag；远程与本地残留都要清掉，
+          # 否则 gh 会因为"本地已有同名 tag 但未推送"而拒绝创建
+          git push --delete origin "refs/tags/$TAG" || echo "remote tag $TAG absent, skip"
+          git tag -d "$TAG" || echo "local tag $TAG absent, skip"
           {
             echo "## DTV Mobile 更新说明"
             echo ""
@@ -101,5 +102,6 @@ jobs:
           } > release_body.md
           gh release create "$TAG" \
             "${{ steps.apk.outputs.apk_path }}" \
+            --target "${{ github.sha }}" \
             --title "DTV X v${VERSION}" \
             --notes-file release_body.md
