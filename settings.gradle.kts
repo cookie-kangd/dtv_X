@@ -1,11 +1,11 @@
-// CI (GitHub Actions) 可通过 -Pdtv.noAliyunMirror=true 跳过阿里云镜像，
-// 直连 google()/mavenCentral()，避免镜像不稳定导致的构建失败。
-val useAliyunMirror = !providers.gradleProperty("dtv.noAliyunMirror").orNull.toBoolean()
-
+// CI（GitHub Actions）设置环境变量 DTV_NO_ALIYUN_MIRROR=true 可跳过阿里云镜像，
+// 直连 google()/mavenCentral()，避免镜像不稳定导致构建失败。
+// 注意：Kotlin DSL 的 pluginManagement 块无法引用脚本顶层变量，故此处内联判断。
 pluginManagement {
   repositories {
-    // Mirrors (helpful in regions where dl.google.com is unreliable)
-    if (useAliyunMirror) {
+    val skipAliyun = System.getenv("DTV_NO_ALIYUN_MIRROR") == "true" || System.getenv("DTV_NO_ALIYUN_MIRROR") == "1"
+    if (!skipAliyun) {
+      // Mirrors (helpful in regions where dl.google.com is unreliable)
       maven("https://maven.aliyun.com/repository/google")
       maven("https://maven.aliyun.com/repository/gradle-plugin")
       maven("https://maven.aliyun.com/repository/public")
@@ -18,7 +18,8 @@ pluginManagement {
 
 dependencyResolutionManagement {
   repositories {
-    if (useAliyunMirror) {
+    val skipAliyun = System.getenv("DTV_NO_ALIYUN_MIRROR") == "true" || System.getenv("DTV_NO_ALIYUN_MIRROR") == "1"
+    if (!skipAliyun) {
       maven("https://maven.aliyun.com/repository/google")
       maven("https://maven.aliyun.com/repository/public")
     }

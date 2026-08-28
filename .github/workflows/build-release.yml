@@ -49,8 +49,10 @@ jobs:
           printf 'storeFile=ci.keystore\nstorePassword=dtvci123456\nkeyAlias=dtv\nkeyPassword=dtvci123456\n' > keystore.properties
 
       - name: Build release APK
-        # -Pdtv.noAliyunMirror=true: skip Aliyun mirror in CI (unstable) and use Google/Maven Central directly
-        run: ./gradlew :androidApp:assembleRelease --no-daemon --stacktrace -Pdtv.noAliyunMirror=true
+        # Skip the Aliyun mirror in CI (unstable / 502) and use Google/Maven Central directly.
+        env:
+          DTV_NO_ALIYUN_MIRROR: "true"
+        run: ./gradlew :androidApp:assembleRelease --no-daemon --stacktrace
 
       - name: Collect APK
         id: apk
