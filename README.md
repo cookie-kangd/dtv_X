@@ -1,6 +1,6 @@
 <p align="center"><img src="screenshots/icon.png" width="96" height="96" alt="DTV Mobile" /></p>
 
-<h3 align="center">DTV</h3>
+<h3 align="center">dtv_X</h3>
 
 <p align="center">
   抖音、b站、斗鱼、虎牙轻量化安卓客户端(非官方)
