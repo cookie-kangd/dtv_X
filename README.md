@@ -6,8 +6,8 @@
   抖音、b站、斗鱼、虎牙轻量化安卓客户端(非官方)
 </p>
 
-> 这是 DTV 项目的 Android 版本；桌面端前往另一个[仓库](https://github.com/chen-zeong/dtv)  
-> 快速跳转：[打赏](#打赏)
+> 这是 DTV 项目的 Android 版本 
+> 此仓库用于自己对dtv_mobile的修改，想要打赏请去上游作者仓库
 
 ---
 
@@ -36,10 +36,6 @@
 | 共享/导入                                                     | B站                                                    |
 | --------------------------------------------------------- | ----------------------------------------------------- |
 | <img src="screenshots/share.jpeg" width="240" alt="共享" /> | <img src="screenshots/b.jpeg" width="240" alt="B站" /> |
-
-## 打赏
-
-如果这个项目对你有帮助，欢迎打赏支持：
 
 <p>
   <img src="screenshots/wechat.jpg" width="260" alt="微信打赏码" />
