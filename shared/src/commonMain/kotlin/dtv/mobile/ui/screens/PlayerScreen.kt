@@ -174,7 +174,25 @@ fun PlayerScreen(
           .onSuccess { url = it }
           .onFailure { error = it.message ?: "获取播放地址失败" }
         runCatching { appState.repo.fetchDouyuPlayInfo(roomId = s.roomId) }
-          .onSuccess { playInfo = it }
+          .onSuccess { info ->
+            playInfo = info
+            // 去掉"自动"后：进入房间默认选真实最高画质（rate 最大档），随后重新解析为最高流
+            if (selectedDouyuRate == null) {
+              info.variants.maxByOrNull { it.rate }?.let { best ->
+                selectedDouyuRate = best.rate.toString()
+                scope.launch {
+                  runCatching {
+                    appState.repo.resolveDouyuStreamUrl(
+                      roomId = s.roomId,
+                      quality = selectedDouyuRate,
+                      cdn = selectedDouyuCdn,
+                    )
+                  }.onSuccess { url = it }
+                    .onFailure { error = it.message ?: "获取最高画质播放地址失败" }
+                }
+              }
+            }
+          }
           .onFailure {
             if (url == null && error == null) error = it.message ?: "获取清晰度信息失败"
           }
@@ -185,11 +203,15 @@ fun PlayerScreen(
           .onFailure { error = it.message ?: "获取虎牙播放地址失败" }
       }
       Platform.Douyin -> {
+        // 去掉"自动"后：进房间直接以原画（ORIGIN，真实最高）解析，不再走平台默认流
+        if (selectedDouyinQuality == null) selectedDouyinQuality = "ORIGIN"
         runCatching { appState.repo.resolveDouyinStreamUrl(webRid = s.roomId, desiredQuality = selectedDouyinQuality) }
           .onSuccess { url = it }
           .onFailure { error = it.message ?: "获取抖音播放地址失败" }
       }
       Platform.Bilibili -> {
+        // 去掉"自动"后：进房间直接以原画（qn=10000，真实最高）解析
+        if (selectedBilibiliQn == null) selectedBilibiliQn = 10000
         runCatching { appState.repo.resolveBilibiliStreamUrl(roomId = s.roomId, qn = selectedBilibiliQn) }
           .onSuccess { url = it }
           .onFailure { error = it.message ?: "获取B站播放地址失败" }
@@ -306,7 +328,7 @@ fun PlayerScreen(
           when (s.platform) {
             Platform.Douyu -> {
               RowWrap(
-                items = listOf("自动" to null) + (playInfo?.variants.orEmpty().map { it.name to it.rate.toString() }),
+                items = playInfo?.variants.orEmpty().map { it.name to it.rate.toString() },
                 selected = selectedDouyuRate,
                 onSelect = {
                   selectedDouyuRate = it
@@ -317,7 +339,6 @@ fun PlayerScreen(
             Platform.Douyin -> {
               RowWrap(
                 items = listOf(
-                  "自动" to null,
                   "原画" to "ORIGIN",
                   "超清" to "FULL_HD1",
                   "高清" to "HD1",
@@ -333,7 +354,6 @@ fun PlayerScreen(
             Platform.Bilibili -> {
               RowWrapInt(
                 items = listOf(
-                  "自动" to null,
                   "原画" to 10000,
                   "蓝光" to 400,
                   "超清" to 250,

@@ -1,12 +1,12 @@
-<p align="center"><img src="screenshots/icon.png" width="96" height="96" alt="DTV Mobile" /></p>
+<p align="center"><img src="screenshots/icon.png" width="96" height="96" alt="DTV X" /></p>
 
-<h3 align="center">DTV</h3>
+<h3 align="center">DTV X</h3>
 
 <p align="center">
   抖音、b站、斗鱼、虎牙轻量化安卓客户端(非官方)
 </p>
 
-> 这是 DTV 项目的 Android 版本 
+> 这是 DTV 项目的 Android 版本
 > 此仓库用于自己对dtv_mobile的修改，想要打赏请去上游作者仓库
 
 ---
@@ -17,10 +17,11 @@
 - 分区浏览：按平台分类浏览直播列表，支持订阅常用分区（快速入口）
 - 关注管理：一键关注/取消关注；首页支持置顶与长按拖拽排序
 - 搜索：按平台搜索主播/直播间；B站支持登录/退出
-- 播放：基于 Android Media3（ExoPlayer）播放；全屏/横竖屏适配；清晰度/线路选择
+- 播放：基于 Android Media3（ExoPlayer）播放；全屏/横竖屏适配；画质档位（最高/高/中/低）；线条选择
 - 弹幕：实时弹幕展示；关键词屏蔽；字号/透明度/显示区域可调
-- 同步：局域网共享/导入（mDNS 发现、手动输入、扫码导入），增量同步关注、分区订阅、屏蔽词
+- 数据同步：局域网共享 / 导入关注、分区订阅与屏蔽词
 - 主题：浅色 / 深色 / 跟随系统
+- 检查更新：设置内一键查询仓库 Release 并下载安装
 
 ## 说明
 
@@ -33,6 +34,6 @@
 | -------------------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------- |
 | <img src="screenshots/home.jpeg" width="240" alt="首页" /> | <img src="screenshots/player.jpeg" width="240" alt="播放" /> | <img src="screenshots/douyu.jpeg" width="240" alt="斗鱼" /> |
 
-| 共享/导入                                                     | B站                                                    |
-| --------------------------------------------------------- | ----------------------------------------------------- |
-| <img src="screenshots/share.jpeg" width="240" alt="共享" /> | <img src="screenshots/b.jpeg" width="240" alt="B站" /> |
+| B站                                                    |
+| ----------------------------------------------------- |
+| <img src="screenshots/b.jpeg" width="240" alt="B站" /> |
