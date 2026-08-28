@@ -216,7 +216,7 @@ private fun QrLoginPanel(
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
       TextButton(onClick = onDismissRequest) { Text("关闭") }
       TextButton(
-        enabled = status is QrStatusUi.Expired || status is QrStatusUi.Failed,
+        enabled = status == QrStatusUi.Expired || status == QrStatusUi.Failed,
         onClick = {
           // 重新申请二维码
           status = QrStatusUi.Loading
