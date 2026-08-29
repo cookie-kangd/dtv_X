@@ -222,7 +222,7 @@ fun SimpleModePlatformScreen(
             StreamerCardSkeleton()
           }
         } else {
-          items(rooms.size, key = { rooms[it].roomId }, span = { GridItemSpan(1) }) { index ->
+          items(rooms.size, key = { rooms[it].roomId }, span = { GridItemSpan(1) }, contentType = { "streamer" }) { index ->
             val streamer = rooms[index]
             StreamerCard(
               streamer = streamer,

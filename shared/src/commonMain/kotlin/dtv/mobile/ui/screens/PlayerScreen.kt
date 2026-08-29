@@ -129,6 +129,8 @@ fun PlayerScreen(
   var error by remember(streamer?.roomId) { mutableStateOf<String?>(null) }
   var loading by remember(streamer?.roomId) { mutableStateOf(false) }
   var playInfo by remember(streamer?.roomId) { mutableStateOf<DouyuPlayInfo?>(null) }
+  // 画质/线路选择只对「当前直播间」生效：状态按 roomId 记忆且不做持久化，
+  // 进入任意直播间时都会重置，然后重新读取「设置-基本设置-画质」的全局档位。
   var selectedDouyuRate by remember(streamer?.roomId) { mutableStateOf<String?>(null) }
   var selectedDouyuCdn by remember(streamer?.roomId) { mutableStateOf<String?>(null) }
   var selectedDouyinQuality by remember(streamer?.roomId) { mutableStateOf<String?>(null) }

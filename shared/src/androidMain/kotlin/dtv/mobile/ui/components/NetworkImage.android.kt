@@ -12,11 +12,15 @@ actual fun NetworkImage(
   modifier: Modifier,
   contentScale: ContentScale,
 ) {
+  if (url.isNullOrBlank()) return
   AsyncImage(
-    model = url,
+    // 不指定 size：Coil 会按 Modifier 约束解码，避免把整张大图读进内存
+    model = coil.request.ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
+      .data(url)
+      .crossfade(true)
+      .build(),
     contentDescription = contentDescription,
     modifier = modifier,
     contentScale = contentScale,
   )
 }
-

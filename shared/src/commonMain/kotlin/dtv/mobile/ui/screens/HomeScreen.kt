@@ -151,7 +151,7 @@ fun HomeScreen(
         }
       }
 
-      items(gridItems, key = { "${it.platform}-${it.roomId}" }) { streamer ->
+      items(gridItems, key = { "${it.platform}-${it.roomId}" }, contentType = { "streamer" }) { streamer ->
         val itemKey = "${streamer.platform}-${streamer.roomId}"
         val isDragging = draggingKey == itemKey
         HomeStreamerCard(
