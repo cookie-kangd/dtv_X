@@ -142,8 +142,11 @@ fun PlayerScreen(
   var danmakuMax by remember { mutableIntStateOf(200) }
   var videoAspectRatio by remember(streamer?.roomId) { mutableStateOf<Float?>(null) }
   var videoReady by remember(streamer?.roomId) { mutableStateOf(false) }
-  var fullscreen by remember(streamer?.roomId) { mutableStateOf(false) }
-  var fullscreenEntry by remember(streamer?.roomId) { mutableStateOf(FullscreenEntry.None) }
+  // 「默认横屏」开启时，进入直播间即按全屏横屏（Manual）方式观看，离开时恢复竖屏
+  var fullscreen by remember(streamer?.roomId) { mutableStateOf(appState.landscapeEnabled) }
+  var fullscreenEntry by remember(streamer?.roomId) {
+    mutableStateOf(if (appState.landscapeEnabled) FullscreenEntry.Manual else FullscreenEntry.None)
+  }
 
   val scope = rememberCoroutineScope()
 

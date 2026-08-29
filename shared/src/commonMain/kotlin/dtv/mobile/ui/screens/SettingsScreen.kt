@@ -467,6 +467,27 @@ private fun BasicSettingsSection(
       }
     }
 
+    // 默认横屏（默认关闭）
+    SettingsCard {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+          Text("默认横屏", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+          Text(
+            text = "开启后点进任意直播间默认以横屏全屏观看，更贴合大屏看直播的体验；关闭则保持竖屏进入。该设置会持久保存，重启 App 后仍保持当前开关状态。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+          )
+        }
+        Switch(
+          checked = appState.landscapeEnabled,
+          onCheckedChange = appState::updateLandscapeEnabled,
+        )
+      }
+    }
+
     // 播放画质（默认最高）
     SettingsCard {
       Text("播放画质", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))

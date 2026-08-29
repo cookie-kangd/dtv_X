@@ -61,6 +61,9 @@ interface SubscriptionStore {
 
   fun loadVideoQuality(): String
   fun saveVideoQuality(value: String)
+
+  fun loadLandscapeEnabled(): Boolean
+  fun saveLandscapeEnabled(value: Boolean)
 }
 
 object InMemorySubscriptionStore : SubscriptionStore {
@@ -79,6 +82,7 @@ object InMemorySubscriptionStore : SubscriptionStore {
   private var accentColorHex: String = ""
   private var compactCardEnabled: Boolean = true
   private var videoQuality: String = VideoQuality.Highest.name
+  private var landscapeEnabled: Boolean = false
 
   override fun loadThemeMode(): ThemeMode = themeMode
 
@@ -168,5 +172,11 @@ object InMemorySubscriptionStore : SubscriptionStore {
 
   override fun saveVideoQuality(value: String) {
     videoQuality = value
+  }
+
+  override fun loadLandscapeEnabled(): Boolean = landscapeEnabled
+
+  override fun saveLandscapeEnabled(value: Boolean) {
+    landscapeEnabled = value
   }
 }

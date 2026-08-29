@@ -32,6 +32,7 @@ class AppState(
   var rememberCategoryEnabled: Boolean by mutableStateOf(true)
   var compactCardEnabled: Boolean by mutableStateOf(true)
   var videoQuality: VideoQuality by mutableStateOf(VideoQuality.Highest)
+  var landscapeEnabled: Boolean by mutableStateOf(false)
   var accentColorHex: String by mutableStateOf("")
   var platformSwitchLoading: Boolean by mutableStateOf(false)
   var selectedPlatform: Platform by mutableStateOf(Platform.Douyu)
@@ -63,6 +64,7 @@ class AppState(
     rememberCategoryEnabled = subscriptionStore.loadRememberCategoryEnabled()
     compactCardEnabled = subscriptionStore.loadCompactCardEnabled()
     videoQuality = VideoQuality.fromNameOrHighest(subscriptionStore.loadVideoQuality())
+    landscapeEnabled = subscriptionStore.loadLandscapeEnabled()
     accentColorHex = subscriptionStore.loadAccentColorHex()
 
     subscriptionStore.loadSimpleModeByPlatform().forEach { entry ->
@@ -193,6 +195,11 @@ class AppState(
   fun updateVideoQuality(quality: VideoQuality) {
     videoQuality = quality
     subscriptionStore.saveVideoQuality(quality.name)
+  }
+
+  fun updateLandscapeEnabled(enabled: Boolean) {
+    landscapeEnabled = enabled
+    subscriptionStore.saveLandscapeEnabled(enabled)
   }
 
   suspend fun refreshFollowedLiveStatus() {

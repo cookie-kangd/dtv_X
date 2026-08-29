@@ -144,4 +144,11 @@ class SubscriptionStoreAndroid(
   override fun saveVideoQuality(value: String) {
     prefs.edit().putString("video_quality", value).apply()
   }
+
+  // 默认横屏默认关闭
+  override fun loadLandscapeEnabled(): Boolean = prefs.getBoolean("landscape_enabled", false)
+
+  override fun saveLandscapeEnabled(value: Boolean) {
+    prefs.edit().putBoolean("landscape_enabled", value).apply()
+  }
 }
