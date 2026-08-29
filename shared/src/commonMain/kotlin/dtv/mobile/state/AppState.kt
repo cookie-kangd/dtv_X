@@ -313,7 +313,12 @@ class AppState(
   }
 
   fun selectPlatform(platform: Platform) {
-    platformSwitchLoading = true
+    // 注意：此处不再设置 platformSwitchLoading = true。
+    // 该全局锁曾用于在切换平台时锁定底部栏，但因只在各平台首页
+    // loadPage(reset=true) 成功结束时才复位，一旦分类/列表接口异常或
+    // 子分类为空（selectedCate2 为 null 提前返回），锁会永远停在 true，
+    // 导致底部栏彻底卡死、再也无法切换平台。
+    // 骨架屏由各平台首页自身的 loading 状态驱动，无需此全局锁。
     selectedPlatform = platform
     currentPartition = null
     if (currentScreen == Screen.Search) {

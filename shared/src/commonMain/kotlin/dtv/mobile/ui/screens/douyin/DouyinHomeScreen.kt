@@ -97,57 +97,67 @@ fun DouyinHomeScreen(
     if (!hasMore) return
 
     if (reset) loading = true else loadingMore = true
-    val resp: PagedResult<Streamer> = appState.repo.fetchDouyinPartitionLiveList(
-      partition = cate2.partition,
-      partitionType = cate2.partitionType,
-      offset = offset,
-      limit = PAGE_SIZE,
-      msToken = msToken,
-    )
-    val incoming = resp.items
-    val old = rooms
-    val (merged, addedCount) = if (reset) {
-      incoming to incoming.size
-    } else {
-      val existing = old.asSequence().map { it.roomId }.toHashSet()
-      val added = incoming.filter { existing.add(it.roomId) }
-      (old + added) to added.size
+    try {
+      val resp: PagedResult<Streamer> = appState.repo.fetchDouyinPartitionLiveList(
+        partition = cate2.partition,
+        partitionType = cate2.partitionType,
+        offset = offset,
+        limit = PAGE_SIZE,
+        msToken = msToken,
+      )
+      val incoming = resp.items
+      val old = rooms
+      val (merged, addedCount) = if (reset) {
+        incoming to incoming.size
+      } else {
+        val existing = old.asSequence().map { it.roomId }.toHashSet()
+        val added = incoming.filter { existing.add(it.roomId) }
+        (old + added) to added.size
+      }
+      rooms = merged
+      hasMore = incoming.isNotEmpty() && addedCount > 0
+      offset += incoming.size
+    } finally {
+      if (reset) {
+        loading = false
+        appState.platformSwitchLoading = false
+      } else {
+        loadingMore = false
+      }
     }
-    rooms = merged
-    hasMore = incoming.isNotEmpty() && addedCount > 0
-    offset += incoming.size
-    if (reset) loading = false else loadingMore = false
-    if (reset) appState.platformSwitchLoading = false
   }
 
   LaunchedEffect(Unit) {
     loading = true
-    val data = appState.repo.fetchDouyinCategories()
-    categories = data
+    try {
+      val data = appState.repo.fetchDouyinCategories()
+      categories = data
 
-    val savedId = if (appState.rememberCategoryEnabled) {
-      appState.rememberedCategoryId(Platform.Douyin)
-    } else {
-      appState.currentPartition
-        ?.takeIf { it.platform == Platform.Douyin }
-        ?.id
+      val savedId = if (appState.rememberCategoryEnabled) {
+        appState.rememberedCategoryId(Platform.Douyin)
+      } else {
+        appState.currentPartition
+          ?.takeIf { it.platform == Platform.Douyin }
+          ?.id
+      }
+      val savedParts = savedId?.split(':').orEmpty()
+      val savedPartitionType = savedParts.getOrNull(1).orEmpty()
+      val savedPartition = savedParts.getOrNull(2).orEmpty()
+
+      val saved = if (savedPartitionType.isNotBlank() && savedPartition.isNotBlank()) {
+        data.asSequence().mapNotNull { c1 ->
+          val c2 = c1.cate2List.firstOrNull { it.partitionType == savedPartitionType && it.partition == savedPartition }
+          c2?.let { c1 to it }
+        }.firstOrNull()
+      } else {
+        null
+      }
+
+      selectedCate1 = saved?.first ?: data.firstOrNull()
+      selectedCate2 = saved?.second ?: selectedCate1?.cate2List?.firstOrNull()
+    } finally {
+      loading = false
     }
-    val savedParts = savedId?.split(':').orEmpty()
-    val savedPartitionType = savedParts.getOrNull(1).orEmpty()
-    val savedPartition = savedParts.getOrNull(2).orEmpty()
-
-    val saved = if (savedPartitionType.isNotBlank() && savedPartition.isNotBlank()) {
-      data.asSequence().mapNotNull { c1 ->
-        val c2 = c1.cate2List.firstOrNull { it.partitionType == savedPartitionType && it.partition == savedPartition }
-        c2?.let { c1 to it }
-      }.firstOrNull()
-    } else {
-      null
-    }
-
-    selectedCate1 = saved?.first ?: data.firstOrNull()
-    selectedCate2 = saved?.second ?: selectedCate1?.cate2List?.firstOrNull()
-    loading = false
   }
 
   LaunchedEffect(selectedCate2?.partition, selectedCate2?.partitionType) {

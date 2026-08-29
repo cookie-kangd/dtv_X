@@ -88,27 +88,34 @@ fun HuyaHomeScreen(
     if (!hasMore) return
 
     if (reset) loading = true else loadingMore = true
-    val startMs = if (reset && !hadItems) System.currentTimeMillis() else 0L
-    val resp: PagedResult<Streamer> = appState.repo.fetchHuyaLiveList(gid = gid, page = page, limit = PAGE_SIZE)
-    val incoming = resp.items
-    val old = rooms
-    val (merged, addedCount) = if (reset) {
-      incoming to incoming.size
-    } else {
-      val existing = old.asSequence().map { it.roomId }.toHashSet()
-      val added = incoming.filter { existing.add(it.roomId) }
-      (old + added) to added.size
+    try {
+      val startMs = if (reset && !hadItems) System.currentTimeMillis() else 0L
+      val resp: PagedResult<Streamer> = appState.repo.fetchHuyaLiveList(gid = gid, page = page, limit = PAGE_SIZE)
+      val incoming = resp.items
+      val old = rooms
+      val (merged, addedCount) = if (reset) {
+        incoming to incoming.size
+      } else {
+        val existing = old.asSequence().map { it.roomId }.toHashSet()
+        val added = incoming.filter { existing.add(it.roomId) }
+        (old + added) to added.size
+      }
+      rooms = merged
+      hasMore = incoming.isNotEmpty() && addedCount > 0
+      page += 1
+      if (reset && !hadItems) {
+        val elapsed = System.currentTimeMillis() - startMs
+        val remaining = 180L - elapsed
+        if (remaining > 0) delay(remaining)
+      }
+    } finally {
+      if (reset) {
+        loading = false
+        appState.platformSwitchLoading = false
+      } else {
+        loadingMore = false
+      }
     }
-    rooms = merged
-    hasMore = incoming.isNotEmpty() && addedCount > 0
-    page += 1
-    if (reset && !hadItems) {
-      val elapsed = System.currentTimeMillis() - startMs
-      val remaining = 180L - elapsed
-      if (remaining > 0) delay(remaining)
-    }
-    if (reset) loading = false else loadingMore = false
-    if (reset) appState.platformSwitchLoading = false
   }
 
   LaunchedEffect(Unit) {

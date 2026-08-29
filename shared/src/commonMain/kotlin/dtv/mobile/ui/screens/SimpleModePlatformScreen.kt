@@ -89,80 +89,85 @@ fun SimpleModePlatformScreen(
     if (!hasMore) return
 
     if (reset) loading = true else loadingMore = true
-
-    val resp: PagedResult<Streamer> = when (platform) {
-      Platform.Douyu -> {
-        val parts = key.split(':')
-        val isCate3 = parts.getOrNull(1) == "c3"
-        val id = parts.getOrNull(2).orEmpty()
-        if (isCate3) {
-          appState.repo.fetchDouyuLiveListByCate3(
-            cate3Id = id,
+    try {
+      val resp: PagedResult<Streamer> = when (platform) {
+        Platform.Douyu -> {
+          val parts = key.split(':')
+          val isCate3 = parts.getOrNull(1) == "c3"
+          val id = parts.getOrNull(2).orEmpty()
+          if (isCate3) {
+            appState.repo.fetchDouyuLiveListByCate3(
+              cate3Id = id,
+              page = (page + 1).coerceAtLeast(1),
+              limit = pageSize,
+            )
+          } else {
+            appState.repo.fetchDouyuLiveListByCate2(
+              cate2Id = id,
+              offset = page * pageSize,
+              limit = pageSize,
+            )
+          }
+        }
+        Platform.Huya -> {
+          val gid = key.substringAfter("huya:", missingDelimiterValue = "")
+          appState.repo.fetchHuyaLiveList(
+            gid = gid,
             page = (page + 1).coerceAtLeast(1),
             limit = pageSize,
           )
-        } else {
-          appState.repo.fetchDouyuLiveListByCate2(
-            cate2Id = id,
-            offset = page * pageSize,
+        }
+        Platform.Douyin -> {
+          val parts = key.split(':')
+          val partitionType = parts.getOrNull(1).orEmpty()
+          val partition = parts.getOrNull(2).orEmpty()
+          appState.repo.fetchDouyinPartitionLiveList(
+            partition = partition,
+            partitionType = partitionType,
+            offset = offset,
             limit = pageSize,
+            msToken = msToken,
           )
         }
+        Platform.Bilibili -> {
+          val parts = key.split(':')
+          val parentAreaId = parts.getOrNull(1)?.toIntOrNull() ?: 0
+          val areaId = parts.getOrNull(2)?.toIntOrNull() ?: 0
+          appState.repo.fetchBilibiliLiveList(
+            parentAreaId = parentAreaId,
+            areaId = areaId,
+            page = (page + 1).coerceAtLeast(1),
+            pageSize = pageSize,
+          )
+        }
+        else -> PagedResult(emptyList())
       }
-      Platform.Huya -> {
-        val gid = key.substringAfter("huya:", missingDelimiterValue = "")
-        appState.repo.fetchHuyaLiveList(
-          gid = gid,
-          page = (page + 1).coerceAtLeast(1),
-          limit = pageSize,
-        )
+
+      val incoming = resp.items
+      val old = rooms
+      val (merged, addedCount) = if (reset) {
+        incoming to incoming.size
+      } else {
+        val existing = old.asSequence().map { it.roomId }.toHashSet()
+        val added = incoming.filter { existing.add(it.roomId) }
+        (old + added) to added.size
       }
-      Platform.Douyin -> {
-        val parts = key.split(':')
-        val partitionType = parts.getOrNull(1).orEmpty()
-        val partition = parts.getOrNull(2).orEmpty()
-        appState.repo.fetchDouyinPartitionLiveList(
-          partition = partition,
-          partitionType = partitionType,
-          offset = offset,
-          limit = pageSize,
-          msToken = msToken,
-        )
+      rooms = merged
+
+      hasMore = incoming.isNotEmpty() && addedCount > 0
+
+      if (platform == Platform.Douyin) {
+        offset += incoming.size
       }
-      Platform.Bilibili -> {
-        val parts = key.split(':')
-        val parentAreaId = parts.getOrNull(1)?.toIntOrNull() ?: 0
-        val areaId = parts.getOrNull(2)?.toIntOrNull() ?: 0
-        appState.repo.fetchBilibiliLiveList(
-          parentAreaId = parentAreaId,
-          areaId = areaId,
-          page = (page + 1).coerceAtLeast(1),
-          pageSize = pageSize,
-        )
+      page += 1
+    } finally {
+      if (reset) {
+        loading = false
+        appState.platformSwitchLoading = false
+      } else {
+        loadingMore = false
       }
-      else -> PagedResult(emptyList())
     }
-
-    val incoming = resp.items
-    val old = rooms
-    val (merged, addedCount) = if (reset) {
-      incoming to incoming.size
-    } else {
-      val existing = old.asSequence().map { it.roomId }.toHashSet()
-      val added = incoming.filter { existing.add(it.roomId) }
-      (old + added) to added.size
-    }
-    rooms = merged
-
-    hasMore = incoming.isNotEmpty() && addedCount > 0
-
-    if (platform == Platform.Douyin) {
-      offset += incoming.size
-    }
-    page += 1
-
-    if (reset) loading = false else loadingMore = false
-    if (reset) appState.platformSwitchLoading = false
   }
 
   LaunchedEffect(selectedPartition.id) {
