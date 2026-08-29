@@ -12,10 +12,12 @@
 /shared/build/
 
 # Android release signing (keep local only)
+# 签名密钥库已迁移到 GitHub Secrets，任何情况下都不要再提交进仓库
 /androidApp/keystore.properties
 /androidApp/keystore/
 /androidApp/*.keystore
 /androidApp/keystore/
+/androidApp/signing/
 
 **/out/
 **/.DS_Store

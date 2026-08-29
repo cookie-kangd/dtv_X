@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # 应用版本号（需与 androidApp/build.gradle.kts 的 versionName 保持一致）
-      APP_VERSION: "0.1.2"
+      APP_VERSION: "0.1.3"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -38,12 +38,27 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Write signing config (use repo-committed persistent keystore)
-        # 关键：使用仓库中固定提交（androidApp/signing/release.keystore）的同一个签名，
-        # 这样所有历史/未来构建都共用一把密钥，v0.1 才能正常 OTA 升级覆盖安装到 v0.1.1，
-        # 不会再出现「签名冲突 / INSTALL_FAILED_UPDATE_INCOMPATIBLE」。
+      - name: Write signing config (keystore decoded from GitHub Secrets)
+        # 签名密钥已迁移到仓库 Secrets（SIGNING_KEYSTORE_BASE64 等），不再提交进仓库。
+        #
+        # ⚠️ 关键：这里解码出的必须是**同一把**密钥（即原先提交在
+        # androidApp/signing/release.keystore 的那把）。Android 的 OTA 覆盖安装校验的是
+        # 签名证书，只要密钥不变，已安装的旧版本就能正常升级；
+        # 一旦换成新密钥，用户升级时会报签名冲突（INSTALL_FAILED_UPDATE_INCOMPATIBLE）。
+        env:
+          SIGNING_KEYSTORE_BASE64: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          printf 'storeFile=signing/release.keystore\nstorePassword=dtvci123456\nkeyAlias=dtv\nkeyPassword=dtvci123456\n' > androidApp/keystore.properties
+          mkdir -p androidApp/signing
+          echo "$SIGNING_KEYSTORE_BASE64" | base64 -d > androidApp/signing/release.keystore
+          printf 'storeFile=signing/release.keystore\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$SIGNING_STORE_PASSWORD" "$SIGNING_KEY_ALIAS" "$SIGNING_KEY_PASSWORD" \
+            > androidApp/keystore.properties
+          # 校验解码产物确实是合法 keystore，避免密钥损坏导致构建出无法升级的包
+          keytool -list -keystore androidApp/signing/release.keystore \
+            -storepass "$SIGNING_STORE_PASSWORD" -alias "$SIGNING_KEY_ALIAS"
 
       - name: Build release APK
         # Skip the Aliyun mirror in CI (unstable / 502) and use Google/Maven Central directly.

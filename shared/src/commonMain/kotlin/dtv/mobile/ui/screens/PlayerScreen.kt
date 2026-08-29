@@ -98,6 +98,7 @@ import dtv.mobile.ui.components.NetworkImage
 import dtv.mobile.ui.player.StreamPlayer
 import dtv.mobile.ui.system.FullscreenEffect
 import dtv.mobile.ui.system.PlatformBackHandler
+import dtv.mobile.ui.system.rememberNotificationPermissionRequester
 import dtv.mobile.util.normalizeHttpUrl
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -147,6 +148,8 @@ fun PlayerScreen(
   var danmakuMax by remember { mutableIntStateOf(200) }
   // 「熄屏听播」（播放器右侧耳机按钮）：仅作用于当前直播间，退出即自动关闭，不做持久化
   var listenOnly by remember(streamer?.roomId) { mutableStateOf(false) }
+  // Android 13+ 需要授权才能在通知栏看到听播常驻通知；未授权不影响播放
+  val requestNotificationPermission = rememberNotificationPermissionRequester()
   var videoAspectRatio by remember(streamer?.roomId) { mutableStateOf<Float?>(null) }
   var videoReady by remember(streamer?.roomId) { mutableStateOf(false) }
   // 「默认横屏」开启时，进入直播间即按全屏横屏（Manual）方式观看，离开时恢复竖屏
@@ -698,7 +701,12 @@ fun PlayerScreen(
               onOpenSettings = { showSettings = true },
               onReload = { reloadUrl() },
               listenOnly = listenOnly,
-              onToggleListenOnly = { listenOnly = !listenOnly },
+              onToggleListenOnly = {
+                val next = !listenOnly
+                // 开启时顺带申请通知权限，让常驻通知可见（未授权也不影响听播）
+                if (next) requestNotificationPermission()
+                listenOnly = next
+              },
               modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .padding(end = 16.dp),
