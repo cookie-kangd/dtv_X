@@ -131,11 +131,4 @@ class SubscriptionStoreAndroid(
   override fun saveLandscapeEnabled(value: Boolean) {
     prefs.edit().putBoolean("landscape_enabled", value).apply()
   }
-
-  // 熄屏听播默认关闭
-  override fun loadBackgroundAudioEnabled(): Boolean = prefs.getBoolean("background_audio_enabled", false)
-
-  override fun saveBackgroundAudioEnabled(value: Boolean) {
-    prefs.edit().putBoolean("background_audio_enabled", value).apply()
-  }
 }

@@ -140,6 +140,8 @@ fun PlayerScreen(
   var danmakuEnabled by remember(streamer?.roomId) { mutableStateOf(true) }
   var danmakuMessages by remember(streamer?.roomId) { mutableStateOf<List<DanmakuMessage>>(emptyList()) }
   var danmakuMax by remember { mutableIntStateOf(200) }
+  // 「熄屏听播」（播放器右侧耳机按钮）：仅作用于当前直播间，退出即自动关闭，不做持久化
+  var listenOnly by remember(streamer?.roomId) { mutableStateOf(false) }
   var videoAspectRatio by remember(streamer?.roomId) { mutableStateOf<Float?>(null) }
   var videoReady by remember(streamer?.roomId) { mutableStateOf(false) }
   // 「默认横屏」开启时，进入直播间即按全屏横屏（Manual）方式观看，离开时恢复竖屏
@@ -253,9 +255,14 @@ fun PlayerScreen(
     derivedStateOf { appState.danmuBlockKeywords.map { it.lowercase() }.filter { it.isNotBlank() } }
   }
 
-  LaunchedEffect(streamer?.roomId, streamer?.platform, danmakuEnabled, url, blockKeywordsLower) {
+  LaunchedEffect(streamer?.roomId, streamer?.platform, danmakuEnabled, listenOnly, url, blockKeywordsLower) {
     val s = streamer ?: return@LaunchedEffect
-    if (!danmakuEnabled) return@LaunchedEffect
+    // 熄屏听播开启时彻底断开弹幕连接：省掉 WebSocket 收包、列表重组与网络开销，
+    // 让后台占用真正只剩一路音频解码。
+    if (!danmakuEnabled || listenOnly) {
+      danmakuMessages = emptyList()
+      return@LaunchedEffect
+    }
     if (url == null) {
       danmakuMessages = emptyList()
       return@LaunchedEffect
@@ -556,7 +563,7 @@ fun PlayerScreen(
                 fullscreen = fullscreen,
                 liveMode = true,
                 zoomToFill = verticalFullBleed,
-                backgroundAudio = appState.backgroundAudioEnabled,
+                backgroundAudio = listenOnly,
                 onVideoAspectRatioChanged = {
                   videoAspectRatio = it
                   if (it != null && it > 0f) videoReady = true
@@ -685,6 +692,8 @@ fun PlayerScreen(
               },
               onOpenSettings = { showSettings = true },
               onReload = { reloadUrl() },
+              listenOnly = listenOnly,
+              onToggleListenOnly = { listenOnly = !listenOnly },
               modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .padding(end = 16.dp),
@@ -1004,6 +1013,8 @@ private fun PlayerSideControlsOverlay(
   onToggleFullscreen: () -> Unit,
   onOpenSettings: () -> Unit,
   onReload: () -> Unit,
+  listenOnly: Boolean,
+  onToggleListenOnly: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   Column(
@@ -1016,6 +1027,12 @@ private fun PlayerSideControlsOverlay(
     if (showFullscreen) {
       ControlFab(icon = Icons.Default.FullscreenExit.takeIf { fullscreen } ?: Icons.Default.Fullscreen, onClick = onToggleFullscreen)
     }
+    // 熄屏听播：未开启时显示耳机，开启后显示"关闭耳机"图标，再次点击即关闭
+    ControlFab(
+      icon = if (listenOnly) Icons.Default.HeadsetOff else Icons.Default.Headphones,
+      onClick = onToggleListenOnly,
+      active = listenOnly,
+    )
   }
 }
 
@@ -1024,12 +1041,17 @@ private fun ControlFab(
   icon: androidx.compose.ui.graphics.vector.ImageVector,
   onClick: () -> Unit,
   modifier: Modifier = Modifier,
+  active: Boolean = false,
 ) {
+  val activeTint = MaterialTheme.colorScheme.primary
   Surface(
     modifier = modifier.size(38.dp).clip(CircleShape).clickable(onClick = onClick),
     shape = CircleShape,
-    color = Color.White.copy(alpha = 0.10f),
-    border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+    color = if (active) activeTint.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.10f),
+    border = BorderStroke(
+      1.dp,
+      if (active) activeTint.copy(alpha = 0.55f) else Color.White.copy(alpha = 0.12f),
+    ),
     tonalElevation = 0.dp,
     shadowElevation = 0.dp,
   ) {
@@ -1038,7 +1060,7 @@ private fun ControlFab(
         modifier = Modifier.size(25.dp),
         imageVector = icon,
         contentDescription = null,
-        tint = Color.White.copy(alpha = 0.92f),
+        tint = if (active) activeTint else Color.White.copy(alpha = 0.92f),
       )
     }
   }
