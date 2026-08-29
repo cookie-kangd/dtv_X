@@ -68,9 +68,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.PathBuilder
+import androidx.compose.ui.graphics.vector.PathNode
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -1057,42 +1058,46 @@ private fun listenOnlyIcon(off: Boolean): ImageVector = ImageVector.Builder(
   viewportHeight = 24f,
 ).apply {
   val ink = SolidColor(Color.White)
-  // 头梁：从左耳罩顶部起，向上绕半圆到右耳罩顶部
+  // 头梁：用折线近似半圆，配合圆角连接看起来就是一条圆润的拱形
   addPath(
-    pathData = PathBuilder()
-      .moveTo(4f, 15f)
-      .arcTo(8f, 8f, 0f, false, true, 20f, 15f)
-      .build(),
+    pathData = listOf(
+      PathNode.MoveTo(3.2f, 13.6f),
+      PathNode.LineTo(3.7f, 9.4f),
+      PathNode.LineTo(6.6f, 5.9f),
+      PathNode.LineTo(12f, 4f),
+      PathNode.LineTo(17.4f, 5.9f),
+      PathNode.LineTo(20.3f, 9.4f),
+      PathNode.LineTo(20.8f, 13.6f),
+    ),
     fill = null,
     stroke = ink,
     strokeLineWidth = 2f,
     strokeLineCap = StrokeCap.Round,
+    strokeLineJoin = StrokeJoin.Round,
   )
   // 左右耳罩
   addPath(
-    pathData = PathBuilder()
-      .moveTo(2f, 14f)
-      .lineTo(6f, 14f)
-      .lineTo(6f, 18f)
-      .quadraticBezierTo(6f, 20f, 4f, 20f)
-      .quadraticBezierTo(2f, 20f, 2f, 18f)
-      .close()
-      .moveTo(22f, 14f)
-      .lineTo(18f, 14f)
-      .lineTo(18f, 18f)
-      .quadraticBezierTo(18f, 20f, 20f, 20f)
-      .quadraticBezierTo(22f, 20f, 22f, 18f)
-      .close()
-      .build(),
+    pathData = listOf(
+      PathNode.MoveTo(2f, 13f),
+      PathNode.LineTo(6.6f, 13f),
+      PathNode.LineTo(6.6f, 19f),
+      PathNode.LineTo(2f, 19f),
+      PathNode.Close,
+      PathNode.MoveTo(17.4f, 13f),
+      PathNode.LineTo(22f, 13f),
+      PathNode.LineTo(22f, 19f),
+      PathNode.LineTo(17.4f, 19f),
+      PathNode.Close,
+    ),
     fill = ink,
   )
   if (off) {
     // 斜杠：表示「关闭 / 停止听播」
     addPath(
-      pathData = PathBuilder()
-        .moveTo(3.5f, 20.5f)
-        .lineTo(20.5f, 3.5f)
-        .build(),
+      pathData = listOf(
+        PathNode.MoveTo(3.5f, 20.5f),
+        PathNode.LineTo(20.5f, 3.5f),
+      ),
       fill = null,
       stroke = ink,
       strokeLineWidth = 2f,
