@@ -175,40 +175,32 @@ fun PlayerScreen(
     selectedBilibiliQn = null
     when (s.platform) {
       Platform.Douyu -> {
-        runCatching { appState.repo.resolveDouyuStreamUrl(roomId = s.roomId) }
-          .onSuccess { url = it }
-          .onFailure { error = it.message ?: "获取播放地址失败" }
-        runCatching { appState.repo.fetchDouyuPlayInfo(roomId = s.roomId) }
-          .onSuccess { info ->
-            playInfo = info
-            // 去掉"自动"后：默认档位跟随「设置-基本设置-画质」，
-            // 选「低」就用最低档，「最高」就用真实最高档（rate 最大）
-            if (selectedDouyuRate == null) {
-              val picked = pickDouyuRate(info.variants, appState.videoQuality)
-              if (picked != null) {
-                selectedDouyuRate = picked
-                scope.launch {
-                  runCatching {
-                    appState.repo.resolveDouyuStreamUrl(
-                      roomId = s.roomId,
-                      quality = picked,
-                      cdn = selectedDouyuCdn,
-                    )
-                  }.onSuccess { url = it }
-                    .onFailure {
-                      // 指定档位拿不到地址时回退到斗鱼默认流，避免直播间黑屏
-                      runCatching {
-                        appState.repo.resolveDouyuStreamUrl(roomId = s.roomId, cdn = selectedDouyuCdn)
-                      }.onSuccess { url = it }
-                        .onFailure { err -> error = err.message ?: "获取播放地址失败" }
-                    }
+        // 初始画质跟随「设置-基本设置-画质」：映射为斗鱼解析器能识别的语义档位名
+        // （原画/蓝光/高清/标清），由解析器内部挑选正确 rate。
+        // 关键：只「解析一次」并赋值 url——先播默认流再切档位正是造成"闪一下"的元凶。
+        val initialQualityName = pickDouyuQualityName(appState.videoQuality)
+        runCatching {
+          appState.repo.resolveDouyuStreamUrl(
+            roomId = s.roomId,
+            quality = initialQualityName,
+            cdn = selectedDouyuCdn,
+          )
+        }.onSuccess { resolvedUrl ->
+          url = resolvedUrl
+          // 异步拉取可选清晰度/线路，仅用于设置面板展示与档位高亮，不参与起播，避免阻塞/闪烁
+          scope.launch {
+            runCatching { appState.repo.fetchDouyuPlayInfo(roomId = s.roomId) }
+              .onSuccess { info ->
+                playInfo = info
+                if (selectedDouyuRate == null) {
+                  selectedDouyuRate = matchDouyuRate(info.variants, initialQualityName)
                 }
               }
-            }
+              .onFailure {
+                // 播放地址已就绪，仅清晰度列表获取失败，可忽略
+              }
           }
-          .onFailure {
-            if (url == null && error == null) error = it.message ?: "获取清晰度信息失败"
-          }
+        }.onFailure { error = it.message ?: "获取播放地址失败" }
       }
       Platform.Huya -> {
         runCatching { appState.repo.resolveHuyaStreamUrl(roomId = s.roomId) }
@@ -1558,19 +1550,36 @@ private val DOUYIN_QUALITY_ASC = listOf("SD1", "HD1", "FULL_HD1", "ORIGIN")
 private val BILIBILI_QN_ASC = listOf(80, 150, 250, 400, 10000)
 
 /**
- * 斗鱼：按 rate 升序后按全局画质档位取索引。
- * 低→最低档，中→中间档，高→次高档，最高→最高档（真实最高）。
+ * 把全局画质档位映射为斗鱼解析器能识别的「语义档位名」。
+ * 注意：斗鱼的 原画 对应 rate=0（数值最小却是最高画质），因此不能按 rate 数值大小排序取档位，
+ * 必须用语义名交给解析器按名称匹配，才能确保「最高」= 原画。
  */
-private fun pickDouyuRate(variants: List<DouyuPlayVariant>, quality: VideoQuality): String? {
+private fun pickDouyuQualityName(quality: VideoQuality): String = when (quality) {
+  VideoQuality.Highest -> "原画"
+  VideoQuality.High -> "蓝光"
+  VideoQuality.Medium -> "高清"
+  VideoQuality.Low -> "标清"
+}
+
+/**
+ * 根据语义画质名，从斗鱼清晰度列表里反查对应 rate（字符串），用于设置面板高亮当前档位。
+ * 解析器内部挑选 rate 的规则优先于这里的兜底，二者尽量保持一致。
+ */
+private fun matchDouyuRate(variants: List<DouyuPlayVariant>, name: String): String? {
   if (variants.isEmpty()) return null
-  val sorted = variants.sortedBy { it.rate }
-  val index = when (quality) {
-    VideoQuality.Low -> 0
-    VideoQuality.Medium -> sorted.size / 2
-    VideoQuality.High -> (sorted.size - 2).coerceAtLeast(0)
-    VideoQuality.Highest -> sorted.size - 1
+  return when (name) {
+    "原画" -> variants.firstOrNull { it.rate == 0 }?.rate?.toString()
+      ?: variants.firstOrNull { it.name.contains("原画") }?.rate?.toString()
+      ?: variants.minOfOrNull { it.rate }?.toString()
+    "蓝光" -> variants.firstOrNull { it.name.contains("蓝光") }?.rate?.toString()
+      ?: variants.maxByOrNull { it.bit ?: 0 }?.rate?.toString()
+    "高清" -> variants.firstOrNull { it.name.contains("高清") }?.rate?.toString()
+      ?: variants.firstOrNull { it.name.contains("超清") }?.rate?.toString()
+      ?: variants.filter { it.rate != 0 }.maxByOrNull { it.bit ?: 0 }?.rate?.toString()
+    else -> variants.firstOrNull { it.name.contains("标清") || it.name.contains("流畅") || it.name.contains("普清") }?.rate?.toString()
+      ?: variants.filter { it.rate != 0 }.minByOrNull { it.bit ?: Int.MAX_VALUE }?.rate?.toString()
+      ?: variants.minOfOrNull { it.rate }?.toString()
   }
-  return sorted[index.coerceIn(0, sorted.size - 1)].rate.toString()
 }
 
 private fun pickDouyinQuality(quality: VideoQuality): String = when (quality) {
