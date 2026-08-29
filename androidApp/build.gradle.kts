@@ -56,14 +56,10 @@ android {
 
   buildTypes {
     getByName("release") {
-      // 开启 R8 代码压缩与资源压缩：显著减小 APK 体积、减少类加载与内存占用。
-      // 规则见 proguard-rules.pro —— 业务代码整体保留，只压缩第三方库。
-      isMinifyEnabled = true
-      isShrinkResources = true
-      proguardFiles(
-        getDefaultProguardFile("proguard-android-optimize.txt"),
-        "proguard-rules.pro",
-      )
+      // 不开启 R8 压缩：开启后斗鱼直播间出现黑屏 + "N5.0" 白字，
+      // 为保证功能稳定，这里保持关闭（体积换稳定性）。
+      isMinifyEnabled = false
+      isShrinkResources = false
       signingConfig = signingConfigs.getByName("release")
     }
   }

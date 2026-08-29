@@ -189,16 +189,19 @@ fun PlayerScreen(
                 selectedDouyuRate = picked
                 scope.launch {
                   runCatching {
-                    resolveDouyuWithFallback(
-                      repo = appState.repo,
+                    appState.repo.resolveDouyuStreamUrl(
                       roomId = s.roomId,
-                      preferredRate = picked,
+                      quality = picked,
                       cdn = selectedDouyuCdn,
                     )
-                  }.onSuccess { (resolvedUrl, actualRate) ->
-                    selectedDouyuRate = actualRate
-                    url = resolvedUrl
-                  }.onFailure { error = it.message ?: "获取播放地址失败" }
+                  }.onSuccess { url = it }
+                    .onFailure {
+                      // 指定档位拿不到地址时回退到斗鱼默认流，避免直播间黑屏
+                      runCatching {
+                        appState.repo.resolveDouyuStreamUrl(roomId = s.roomId, cdn = selectedDouyuCdn)
+                      }.onSuccess { url = it }
+                        .onFailure { err -> error = err.message ?: "获取播放地址失败" }
+                    }
                 }
               }
             }
@@ -1623,33 +1626,3 @@ private suspend fun resolveBilibiliWithFallback(
   throw lastErr ?: IllegalStateException("获取B站播放地址失败")
 }
 
-/**
- * 斗鱼：从首选 rate 开始，失败则依次尝试更低的 rate，返回 (播放地址, 实际生效 rate)。
- */
-private suspend fun resolveDouyuWithFallback(
-  repo: DtvRepository,
-  roomId: String,
-  preferredRate: String,
-  cdn: String?,
-): Pair<String, String> {
-  val info = runCatching { repo.fetchDouyuPlayInfo(roomId = roomId) }.getOrNull()
-  val desc = info?.variants?.sortedByDescending { it.rate }.orEmpty()
-  val order = buildList {
-    add(preferredRate)
-    // 依次尝试比首选更低的档位
-    val preferredInt = preferredRate.toIntOrNull()
-    if (preferredInt != null) {
-      desc.filter { it.rate < preferredInt }.forEach { add(it.rate.toString()) }
-    } else {
-      desc.forEach { add(it.rate.toString()) }
-    }
-  }.distinct()
-
-  var lastErr: Throwable? = null
-  for (rate in order) {
-    runCatching { repo.resolveDouyuStreamUrl(roomId = roomId, quality = rate, cdn = cdn) }
-      .onSuccess { return it to rate }
-      .onFailure { lastErr = it }
-  }
-  throw lastErr ?: IllegalStateException("获取播放地址失败")
-}
