@@ -57,6 +57,19 @@
 -keep class **.R$* { *; }
 -keep class **.R { *; }
 
+# ---- JDK 专有包（Android 上不存在，仅被第三方库间接引用）------------------
+# Rhino(org.mozilla.javascript) 会引用 java.beans 做 JSON 转换，
+# 这条代码路径在 Android 上不会被触发，忽略即可。
+-dontwarn java.beans.**
+-dontwarn java.lang.management.**
+-dontwarn javax.management.**
+-dontwarn javax.naming.**
+-dontwarn java.awt.**
+-dontwarn org.mozilla.javascript.**
+-dontwarn org.slf4j.impl.**
+-dontwarn org.jetbrains.annotations.**
+-dontwarn android.annotation.**
+
 # ---- 移除日志（release 下不再输出）----------------------------------------
 -assumenosideeffects class android.util.Log {
     public static boolean isLoggable(java.lang.String, int);
