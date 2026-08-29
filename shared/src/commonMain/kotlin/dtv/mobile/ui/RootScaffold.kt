@@ -44,7 +44,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dtv.mobile.model.Platform
-import dtv.mobile.model.SubscribedPartition
+import dtv.mobile.state.SubscribedPartition
 import dtv.mobile.state.AppState
 import dtv.mobile.state.Screen
 import dtv.mobile.ui.screens.HomeScreen
