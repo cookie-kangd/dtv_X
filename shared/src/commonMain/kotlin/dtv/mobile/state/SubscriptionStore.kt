@@ -5,12 +5,6 @@ import dtv.mobile.model.Platform
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class SimpleModeEntry(
-  val platform: Platform,
-  val enabled: Boolean,
-)
-
-@Serializable
 data class RememberedCategoryEntry(
   val platform: Platform,
   val partitionId: String,
@@ -22,9 +16,6 @@ interface SubscriptionStore {
 
   fun loadFollowedStreamers(): List<Streamer>
   fun saveFollowedStreamers(items: List<Streamer>)
-
-  fun loadPinnedFollowedStreamerKeys(): List<String>
-  fun savePinnedFollowedStreamerKeys(items: List<String>)
 
   fun loadLandscapeDanmakuFontScale(): Float
   fun saveLandscapeDanmakuFontScale(value: Float)
@@ -43,9 +34,6 @@ interface SubscriptionStore {
 
   fun loadDanmuBlockKeywords(): List<String>
   fun saveDanmuBlockKeywords(items: List<String>)
-
-  fun loadSimpleModeByPlatform(): List<SimpleModeEntry>
-  fun saveSimpleModeByPlatform(items: List<SimpleModeEntry>)
 
   fun loadRememberCategoryEnabled(): Boolean
   fun saveRememberCategoryEnabled(value: Boolean)
@@ -69,14 +57,12 @@ interface SubscriptionStore {
 object InMemorySubscriptionStore : SubscriptionStore {
   private var themeMode: ThemeMode = ThemeMode.System
   private var followed: List<Streamer> = emptyList()
-  private var pinnedKeys: List<String> = emptyList()
   private var landscapeDanmakuFontScale: Float = 1.2f
   private var danmakuFontScale: Float = 1.0f
   private var danmakuOpacity: Float = 1.0f
   private var danmakuAreaFraction: Float = 0.5f
   private var partitions: List<SubscribedPartition> = emptyList()
   private var danmuBlockKeywords: List<String> = emptyList()
-  private var simpleModes: List<SimpleModeEntry> = emptyList()
   private var rememberCategoryEnabled: Boolean = true
   private var rememberedCategories: List<RememberedCategoryEntry> = emptyList()
   private var accentColorHex: String = ""
@@ -94,12 +80,6 @@ object InMemorySubscriptionStore : SubscriptionStore {
 
   override fun saveFollowedStreamers(items: List<Streamer>) {
     followed = items.toList()
-  }
-
-  override fun loadPinnedFollowedStreamerKeys(): List<String> = pinnedKeys
-
-  override fun savePinnedFollowedStreamerKeys(items: List<String>) {
-    pinnedKeys = items.toList()
   }
 
   override fun loadLandscapeDanmakuFontScale(): Float = landscapeDanmakuFontScale
@@ -136,12 +116,6 @@ object InMemorySubscriptionStore : SubscriptionStore {
 
   override fun saveDanmuBlockKeywords(items: List<String>) {
     danmuBlockKeywords = items.toList()
-  }
-
-  override fun loadSimpleModeByPlatform(): List<SimpleModeEntry> = simpleModes
-
-  override fun saveSimpleModeByPlatform(items: List<SimpleModeEntry>) {
-    simpleModes = items.toList()
   }
 
   override fun loadRememberCategoryEnabled(): Boolean = rememberCategoryEnabled

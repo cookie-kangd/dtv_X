@@ -45,16 +45,13 @@ class AppState(
   var currentPartition: SubscribedPartition? by mutableStateOf(null)
 
   val followedStreamers = mutableStateListOf<Streamer>()
-  val pinnedFollowedStreamerKeys = mutableStateListOf<String>()
   val subscribedPartitions = mutableStateListOf<SubscribedPartition>()
   val danmuBlockKeywords = mutableStateListOf<String>()
-  private val simpleModeByPlatform = mutableStateMapOf<Platform, Boolean>()
   private val rememberedCategoryByPlatform = mutableStateMapOf<Platform, String>()
 
   init {
     themeMode = subscriptionStore.loadThemeMode()
     followedStreamers.addAll(subscriptionStore.loadFollowedStreamers())
-    pinnedFollowedStreamerKeys.addAll(subscriptionStore.loadPinnedFollowedStreamerKeys())
     subscribedPartitions.addAll(subscriptionStore.loadSubscribedPartitions())
     danmuBlockKeywords.addAll(subscriptionStore.loadDanmuBlockKeywords())
     landscapeDanmakuFontScale = subscriptionStore.loadLandscapeDanmakuFontScale()
@@ -67,9 +64,6 @@ class AppState(
     landscapeEnabled = subscriptionStore.loadLandscapeEnabled()
     accentColorHex = subscriptionStore.loadAccentColorHex()
 
-    subscriptionStore.loadSimpleModeByPlatform().forEach { entry ->
-      simpleModeByPlatform[entry.platform] = entry.enabled
-    }
     subscriptionStore.loadRememberedCategoryByPlatform().forEach { entry ->
       rememberedCategoryByPlatform[entry.platform] = entry.partitionId
     }
@@ -90,26 +84,10 @@ class AppState(
     val index = followedStreamers.indexOfFirst { streamerKey(it) == key }
     if (index >= 0) {
       followedStreamers.removeAt(index)
-      if (pinnedFollowedStreamerKeys.remove(key)) {
-        subscriptionStore.savePinnedFollowedStreamerKeys(pinnedFollowedStreamerKeys.toList())
-      }
     } else {
       followedStreamers.add(streamer)
     }
     subscriptionStore.saveFollowedStreamers(followedStreamers.toList())
-  }
-
-  fun setPinnedFollowedStreamers(keys: List<String>) {
-    val trimmed = keys.asSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
-    pinnedFollowedStreamerKeys.clear()
-    pinnedFollowedStreamerKeys.addAll(trimmed.distinct())
-    subscriptionStore.savePinnedFollowedStreamerKeys(pinnedFollowedStreamerKeys.toList())
-  }
-
-  fun removePinnedFollowedStreamer(key: String) {
-    if (pinnedFollowedStreamerKeys.remove(key)) {
-      subscriptionStore.savePinnedFollowedStreamerKeys(pinnedFollowedStreamerKeys.toList())
-    }
   }
 
   fun updateLandscapeDanmakuFontScale(value: Float) {
@@ -152,19 +130,6 @@ class AppState(
   fun updateThemeMode(mode: ThemeMode) {
     themeMode = mode
     subscriptionStore.saveThemeMode(mode)
-  }
-
-  fun isSimpleMode(platform: Platform): Boolean = simpleModeByPlatform[platform] ?: false
-
-  val simpleModeForSelectedPlatform: Boolean
-    get() = isSimpleMode(selectedPlatform)
-
-  fun toggleSimpleModeForSelectedPlatform() {
-    val p = selectedPlatform
-    val next = !(simpleModeByPlatform[p] ?: false)
-    simpleModeByPlatform[p] = next
-    val entries = simpleModeByPlatform.entries.map { (platform, enabled) -> SimpleModeEntry(platform = platform, enabled = enabled) }
-    subscriptionStore.saveSimpleModeByPlatform(entries)
   }
 
   fun updateRememberCategoryEnabled(enabled: Boolean) {

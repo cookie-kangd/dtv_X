@@ -3,6 +3,7 @@ package dtv.mobile.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -14,11 +15,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,11 +37,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dtv.mobile.model.Platform
+import dtv.mobile.model.SubscribedPartition
 import dtv.mobile.state.AppState
 import dtv.mobile.state.Screen
 import dtv.mobile.ui.screens.HomeScreen
@@ -56,7 +61,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
-import dtv.mobile.model.Platform
 import dtv.mobile.ui.components.BilibiliWebLoginSheet
 import kotlinx.coroutines.launch
 
@@ -64,7 +68,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun RootScaffold(appState: AppState) {
   PlatformBackHandler(enabled = appState.currentScreen != Screen.Home) { appState.back() }
-  val simpleModeEnabled = appState.subscribedPartitions.any { it.platform == appState.selectedPlatform }
 
   var showBilibiliLoginSheet by remember { mutableStateOf(false) }
   var bilibiliLoggedIn by remember { mutableStateOf(false) }
@@ -110,13 +113,7 @@ fun RootScaffold(appState: AppState) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
               }
             },
-            actions = {
-              SimpleModeToggleIcon(
-                enabled = simpleModeEnabled,
-                selected = appState.simpleModeForSelectedPlatform,
-                onClick = appState::toggleSimpleModeForSelectedPlatform,
-              )
-            },
+            actions = {},
             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
               containerColor = Color.Transparent,
               scrolledContainerColor = Color.Transparent,
@@ -141,9 +138,9 @@ fun RootScaffold(appState: AppState) {
           HubTopBar(
             title = if (appState.currentScreen == Screen.Home) "关注列表" else appState.selectedPlatform.title,
             onSearchClick = appState::openSearch,
-            simpleMode = appState.simpleModeForSelectedPlatform,
-            onSimpleModeToggle = appState::toggleSimpleModeForSelectedPlatform,
-            simpleModeEnabled = simpleModeEnabled,
+            currentPartition = appState.currentPartition,
+            isPartitionSubscribed = appState::isPartitionSubscribed,
+            onToggleSubscription = { appState.currentPartition?.let { appState.togglePartition(it) } },
             showBilibiliLogin = appState.currentScreen == Screen.Platform && appState.selectedPlatform == Platform.Bilibili,
             bilibiliLoggedIn = bilibiliLoggedIn,
             onBilibiliLoginClick = { showBilibiliLoginSheet = true },
@@ -220,9 +217,9 @@ fun RootScaffold(appState: AppState) {
 private fun HubTopBar(
   title: String,
   onSearchClick: () -> Unit,
-  simpleMode: Boolean,
-  onSimpleModeToggle: () -> Unit,
-  simpleModeEnabled: Boolean,
+  currentPartition: SubscribedPartition?,
+  isPartitionSubscribed: (SubscribedPartition) -> Boolean,
+  onToggleSubscription: () -> Unit,
   showBilibiliLogin: Boolean,
   bilibiliLoggedIn: Boolean,
   onBilibiliLoginClick: () -> Unit,
@@ -286,7 +283,7 @@ private fun HubTopBar(
       }
 
       // 数据同步与主题模式入口已迁移到「设置」页；
-      // 顶栏仅保留平台页专属操作（B站登录 / 简易模式）与首页的设置入口。
+      // 顶栏仅保留平台页专属操作（B站登录 / 订阅）与首页的设置入口。
       if (showPlatformActions) {
         if (showBilibiliLogin) {
           IconButton(
@@ -303,11 +300,12 @@ private fun HubTopBar(
             )
           }
         }
-        SimpleModeToggleIcon(
-          enabled = simpleModeEnabled,
-          selected = simpleMode,
-          onClick = onSimpleModeToggle,
-        )
+        if (currentPartition != null) {
+          SubscriptionTopButton(
+            subscribed = isPartitionSubscribed(currentPartition),
+            onToggle = onToggleSubscription,
+          )
+        }
       }
 
       if (showSettings) {
@@ -324,26 +322,23 @@ private fun HubTopBar(
 }
 
 @Composable
-private fun SimpleModeToggleIcon(
-  enabled: Boolean,
-  selected: Boolean,
-  onClick: () -> Unit,
+private fun SubscriptionTopButton(
+  subscribed: Boolean,
+  onToggle: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  val tint = when {
-    !enabled -> Color(0xFF9CA3AF)
-    selected -> MaterialTheme.colorScheme.primary
-    else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
-  }
-  IconButton(
-    onClick = onClick,
-    enabled = enabled,
-    modifier = modifier,
+  FilledTonalButton(
+    onClick = onToggle,
+    modifier = modifier.height(36.dp),
+    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
   ) {
     Icon(
-      imageVector = Icons.Default.Apps,
-      contentDescription = "简易模式",
-      tint = tint,
+      imageVector = Icons.Default.Star,
+      contentDescription = null,
+      tint = if (subscribed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+      modifier = Modifier.size(18.dp),
     )
+    Spacer(modifier = Modifier.width(4.dp))
+    Text(text = if (subscribed) "已订阅" else "订阅", style = MaterialTheme.typography.labelMedium)
   }
 }

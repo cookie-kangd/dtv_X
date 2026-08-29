@@ -274,12 +274,6 @@ fun DouyinHomeScreen(
           }
         }
 
-        if (currentPartition != null) {
-          val subscribed = appState.isPartitionSubscribed(currentPartition)
-          TextButton(onClick = { appState.togglePartition(currentPartition) }) {
-            Text(text = if (subscribed) "已订阅" else "订阅")
-          }
-        }
       }
       Spacer(modifier = Modifier.height(8.dp))
 

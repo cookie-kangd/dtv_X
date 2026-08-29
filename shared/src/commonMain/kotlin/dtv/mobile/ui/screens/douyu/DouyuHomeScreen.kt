@@ -306,12 +306,6 @@ fun DouyuHomeScreen(
           }
         }
 
-        if (currentPartition != null) {
-          val subscribed = appState.isPartitionSubscribed(currentPartition)
-          TextButton(onClick = { appState.togglePartition(currentPartition) }) {
-            Text(text = if (subscribed) "已订阅" else "订阅")
-          }
-        }
       }
 
       if (cate3List.isNotEmpty()) {

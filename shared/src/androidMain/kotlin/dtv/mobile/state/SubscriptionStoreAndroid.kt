@@ -31,16 +31,6 @@ class SubscriptionStoreAndroid(
     prefs.edit().putString("followed_streamers", raw).apply()
   }
 
-  override fun loadPinnedFollowedStreamerKeys(): List<String> {
-    val raw = prefs.getString("pinned_followed_streamer_keys", null)?.takeIf { it.isNotBlank() } ?: return emptyList()
-    return runCatching { json.decodeFromString(ListSerializer(String.serializer()), raw) }.getOrElse { emptyList() }
-  }
-
-  override fun savePinnedFollowedStreamerKeys(items: List<String>) {
-    val raw = json.encodeToString(ListSerializer(String.serializer()), items)
-    prefs.edit().putString("pinned_followed_streamer_keys", raw).apply()
-  }
-
   override fun loadLandscapeDanmakuFontScale(): Float {
     val raw = prefs.getFloat("landscape_danmaku_font_scale", 1.2f)
     return raw.coerceIn(0.85f, 2.0f)
@@ -95,16 +85,6 @@ class SubscriptionStoreAndroid(
   override fun saveDanmuBlockKeywords(items: List<String>) {
     val raw = json.encodeToString(ListSerializer(String.serializer()), items)
     prefs.edit().putString("danmu_block_keywords", raw).apply()
-  }
-
-  override fun loadSimpleModeByPlatform(): List<SimpleModeEntry> {
-    val raw = prefs.getString("simple_mode_by_platform", null)?.takeIf { it.isNotBlank() } ?: return emptyList()
-    return runCatching { json.decodeFromString(ListSerializer(SimpleModeEntry.serializer()), raw) }.getOrElse { emptyList() }
-  }
-
-  override fun saveSimpleModeByPlatform(items: List<SimpleModeEntry>) {
-    val raw = json.encodeToString(ListSerializer(SimpleModeEntry.serializer()), items)
-    prefs.edit().putString("simple_mode_by_platform", raw).apply()
   }
 
   // 「记住栏目」默认开启：首次安装即为开启状态
