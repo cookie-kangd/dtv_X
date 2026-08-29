@@ -166,6 +166,7 @@ actual fun StreamPlayer(
   fullscreen: Boolean,
   liveMode: Boolean,
   zoomToFill: Boolean,
+  backgroundAudio: Boolean,
   onVideoAspectRatioChanged: (Float?) -> Unit,
   onError: (String) -> Unit,
   modifier: Modifier,
@@ -185,6 +186,19 @@ actual fun StreamPlayer(
           prepare()
         }
       }
+  }
+
+  // 「熄屏听播」：开启后启动前台服务保活，并在息屏 / 切后台时关闭视频轨只留音频。
+  // 开关切换或离开播放页时释放保活并恢复视频轨。
+  DisposableEffect(player, backgroundAudio) {
+    if (backgroundAudio) {
+      BackgroundAudioController.acquire(context, player)
+    }
+    onDispose {
+      if (backgroundAudio) {
+        BackgroundAudioController.release(context)
+      }
+    }
   }
 
   DisposableEffect(player, url) {

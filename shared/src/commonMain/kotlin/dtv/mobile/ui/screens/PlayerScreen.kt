@@ -556,6 +556,7 @@ fun PlayerScreen(
                 fullscreen = fullscreen,
                 liveMode = true,
                 zoomToFill = verticalFullBleed,
+                backgroundAudio = appState.backgroundAudioEnabled,
                 onVideoAspectRatioChanged = {
                   videoAspectRatio = it
                   if (it != null && it > 0f) videoReady = true

@@ -4,6 +4,10 @@
   <uses-permission android:name="android.permission.CAMERA" />
   <!-- 应用内检查更新后安装新版本 APK -->
   <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+  <!-- 「熄屏听播」：前台服务保活 + 媒体播放类型 + 常驻通知 -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
   <application
     android:allowBackup="true"
@@ -34,5 +38,11 @@
         android:name="android.support.FILE_PROVIDER_PATHS"
         android:resource="@xml/file_paths" />
     </provider>
+
+    <!-- 「熄屏听播」保活服务：位于 shared 模块，需使用完整类名声明 -->
+    <service
+      android:name="dtv.mobile.ui.player.LiveAudioService"
+      android:exported="false"
+      android:foregroundServiceType="mediaPlayback" />
   </application>
 </manifest>

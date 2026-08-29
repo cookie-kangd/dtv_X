@@ -497,6 +497,27 @@ private fun BasicSettingsSection(
       }
     }
 
+    // 熄屏听播（默认关闭）
+    SettingsCard {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+          Text("熄屏听播", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+          Text(
+            text = "开启后息屏或切到后台时，仍以极低占用继续播放直播声音：系统会保留应用不被清理，并自动停止画面解码与渲染，只保留音频，更省电省流量。关闭后息屏即停止播放。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+          )
+        }
+        Switch(
+          checked = appState.backgroundAudioEnabled,
+          onCheckedChange = appState::updateBackgroundAudioEnabled,
+        )
+      }
+    }
+
     // 播放画质（默认最高）
     SettingsCard {
       Text("播放画质", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))

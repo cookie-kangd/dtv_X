@@ -52,6 +52,9 @@ interface SubscriptionStore {
 
   fun loadLandscapeEnabled(): Boolean
   fun saveLandscapeEnabled(value: Boolean)
+
+  fun loadBackgroundAudioEnabled(): Boolean
+  fun saveBackgroundAudioEnabled(value: Boolean)
 }
 
 object InMemorySubscriptionStore : SubscriptionStore {
@@ -69,6 +72,7 @@ object InMemorySubscriptionStore : SubscriptionStore {
   private var compactCardEnabled: Boolean = true
   private var videoQuality: String = VideoQuality.Highest.name
   private var landscapeEnabled: Boolean = false
+  private var backgroundAudioEnabled: Boolean = false
 
   override fun loadThemeMode(): ThemeMode = themeMode
 
@@ -152,5 +156,11 @@ object InMemorySubscriptionStore : SubscriptionStore {
 
   override fun saveLandscapeEnabled(value: Boolean) {
     landscapeEnabled = value
+  }
+
+  override fun loadBackgroundAudioEnabled(): Boolean = backgroundAudioEnabled
+
+  override fun saveBackgroundAudioEnabled(value: Boolean) {
+    backgroundAudioEnabled = value
   }
 }

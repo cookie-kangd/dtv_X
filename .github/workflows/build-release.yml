@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # 应用版本号（需与 androidApp/build.gradle.kts 的 versionName 保持一致）
-      APP_VERSION: "0.1"
+      APP_VERSION: "0.1.1"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -89,9 +89,8 @@ jobs:
           # 否则 gh 会因为"本地已有同名 tag 但未推送"而拒绝创建
           git push --delete origin "refs/tags/$TAG" || echo "remote tag $TAG absent, skip"
           git tag -d "$TAG" || echo "local tag $TAG absent, skip"
-          # 只截取与当前版本对应的 CHANGELOG 小节作为 Release 说明：
-          # - v0.1 的发布说明只总结新功能 / 特点，不写问题修复；
-          # - 后续版本（如 v0.1.1）的发布说明只写修复了什么，不重复 v0.1 的功能。
+          # 只截取与当前版本对应的 CHANGELOG 小节作为 Release 说明，
+          # 内容直接写「新增了什么功能、修复了什么问题」，不重复罗列历史版本的内容。
           {
             echo "## DTV Mobile 更新说明"
             echo ""

@@ -9,6 +9,7 @@ expect fun StreamPlayer(
   fullscreen: Boolean = false,
   liveMode: Boolean = true,
   zoomToFill: Boolean = false,
+  backgroundAudio: Boolean = false,
   onVideoAspectRatioChanged: (Float?) -> Unit = {},
   onError: (String) -> Unit = {},
   modifier: Modifier = Modifier,
