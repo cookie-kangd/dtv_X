@@ -66,7 +66,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -1028,13 +1032,74 @@ private fun PlayerSideControlsOverlay(
       ControlFab(icon = Icons.Default.FullscreenExit.takeIf { fullscreen } ?: Icons.Default.Fullscreen, onClick = onToggleFullscreen)
     }
     // 熄屏听播：未开启时显示耳机，开启后显示"关闭耳机"图标，再次点击即关闭
+    val listenOnlyIcon = remember(listenOnly) { listenOnlyIcon(off = listenOnly) }
     ControlFab(
-      icon = if (listenOnly) Icons.Default.HeadsetOff else Icons.Default.Headphones,
+      icon = listenOnlyIcon,
       onClick = onToggleListenOnly,
       active = listenOnly,
     )
   }
 }
+
+/**
+ * 自绘「耳机 / 耳机（关闭）」图标。
+ *
+ * 不直接使用图标集里的 Headphones / HeadsetOff：这两个名字在当前依赖的
+ * material-icons 版本里并不存在（会直接编译失败）。自绘可完全摆脱图标集版本差异。
+ *
+ * 绘制内容：一条头梁（描边）+ 左右耳罩（填充）；off = true 时再叠一道斜杠表示「关闭」。
+ */
+private fun listenOnlyIcon(off: Boolean): ImageVector = ImageVector.Builder(
+  name = if (off) "ListenOnlyOff" else "ListenOnly",
+  defaultWidth = 24.dp,
+  defaultHeight = 24.dp,
+  viewportWidth = 24f,
+  viewportHeight = 24f,
+).apply {
+  val ink = SolidColor(Color.White)
+  // 头梁：从左耳罩顶部起，向上绕半圆到右耳罩顶部
+  addPath(
+    pathData = PathBuilder()
+      .moveTo(4f, 15f)
+      .arcTo(8f, 8f, 0f, false, true, 20f, 15f)
+      .build(),
+    fill = null,
+    stroke = ink,
+    strokeLineWidth = 2f,
+    strokeLineCap = StrokeCap.Round,
+  )
+  // 左右耳罩
+  addPath(
+    pathData = PathBuilder()
+      .moveTo(2f, 14f)
+      .lineTo(6f, 14f)
+      .lineTo(6f, 18f)
+      .quadraticBezierTo(6f, 20f, 4f, 20f)
+      .quadraticBezierTo(2f, 20f, 2f, 18f)
+      .close()
+      .moveTo(22f, 14f)
+      .lineTo(18f, 14f)
+      .lineTo(18f, 18f)
+      .quadraticBezierTo(18f, 20f, 20f, 20f)
+      .quadraticBezierTo(22f, 20f, 22f, 18f)
+      .close()
+      .build(),
+    fill = ink,
+  )
+  if (off) {
+    // 斜杠：表示「关闭 / 停止听播」
+    addPath(
+      pathData = PathBuilder()
+        .moveTo(3.5f, 20.5f)
+        .lineTo(20.5f, 3.5f)
+        .build(),
+      fill = null,
+      stroke = ink,
+      strokeLineWidth = 2f,
+      strokeLineCap = StrokeCap.Round,
+    )
+  }
+}.build()
 
 @Composable
 private fun ControlFab(
