@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # 应用版本号（需与 androidApp/build.gradle.kts 的 versionName 保持一致）
-      APP_VERSION: "0.1.1"
+      APP_VERSION: "0.1"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -38,18 +38,12 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Create CI signing keystore
+      - name: Write signing config (use repo-committed persistent keystore)
+        # 关键：使用仓库中固定提交（androidApp/signing/release.keystore）的同一个签名，
+        # 这样所有历史/未来构建都共用一把密钥，v0.1 才能正常 OTA 升级覆盖安装到 v0.1.1，
+        # 不会再出现「签名冲突 / INSTALL_FAILED_UPDATE_INCOMPATIBLE」。
         run: |
-          keytool -genkeypair -v \
-            -keystore androidApp/ci.keystore \
-            -alias dtv \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass dtvci123456 \
-            -keypass dtvci123456 \
-            -dname "CN=DTV CI, OU=CI, O=DTV, L=Beijing, ST=Beijing, C=CN"
-          printf 'storeFile=ci.keystore\nstorePassword=dtvci123456\nkeyAlias=dtv\nkeyPassword=dtvci123456\n' > androidApp/keystore.properties
+          printf 'storeFile=signing/release.keystore\nstorePassword=dtvci123456\nkeyAlias=dtv\nkeyPassword=dtvci123456\n' > androidApp/keystore.properties
 
       - name: Build release APK
         # Skip the Aliyun mirror in CI (unstable / 502) and use Google/Maven Central directly.
@@ -95,10 +89,19 @@ jobs:
           # 否则 gh 会因为"本地已有同名 tag 但未推送"而拒绝创建
           git push --delete origin "refs/tags/$TAG" || echo "remote tag $TAG absent, skip"
           git tag -d "$TAG" || echo "local tag $TAG absent, skip"
+          # 只截取与当前版本对应的 CHANGELOG 小节作为 Release 说明：
+          # - v0.1 的发布说明只总结新功能 / 特点，不写问题修复；
+          # - 后续版本（如 v0.1.1）的发布说明只写修复了什么，不重复 v0.1 的功能。
           {
             echo "## DTV Mobile 更新说明"
             echo ""
-            cat CHANGELOG.md
+            awk -v ver="v${VERSION}" '
+              /^## / {
+                if ($0 == "## " ver) { p = 1; next }
+                else if ($0 ~ /^## /) { p = 0 }
+              }
+              p { print }
+            ' CHANGELOG.md
           } > release_body.md
           gh release create "$TAG" \
             "${{ steps.apk.outputs.apk_path }}" \

@@ -5,8 +5,8 @@ import androidx.compose.ui.graphics.Color
 // From desktop `web/src/app/legacy-global.css`
 internal object DtvColors {
   // livestream-hub (aligned tokens)
-  val HubAccent = Color(0xFFA3E635) // lime-400
-  val HubAccentHover = Color(0xFFBEF264) // lime-200
+  val HubAccent = Color(0xFF14B8A6) // teal-500（全局默认强调色）
+  val HubAccentHover = Color(0xFF5EEAD4) // teal-300
 
   // day
   val DayBgPrimary = Color(0xFFF5F5F5)

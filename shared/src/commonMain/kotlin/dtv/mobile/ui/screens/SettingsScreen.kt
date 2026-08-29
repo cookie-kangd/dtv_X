@@ -63,7 +63,6 @@ import dtv.mobile.update.rememberUpdateManager
 private enum class SettingsSection { Root, Basic, Sync }
 
 private val PresetAccentColors = listOf(
-  "默认" to "",
   "青柠" to "#A3E635",
   "红色" to "#EF4444",
   "橙色" to "#F97316",
@@ -78,6 +77,9 @@ private val PresetAccentColors = listOf(
   "天蓝" to "#38BDF8",
   "灰色" to "#94A3B8",
 )
+
+/** 全局颜色默认色（青色）。未显式设置时即使用此色，点击「恢复默认颜色」也会回到此色。 */
+private const val DEFAULT_ACCENT_HEX = "#14B8A6"
 
 @Composable
 fun SettingsScreen(
@@ -183,7 +185,14 @@ private fun UpdateCheckerCard(
               UpdateStatusText(text = "正在下载新版本… $percent%")
               UpdateProgressBar(progress = state.progress)
             }
-            is UpdateState.Downloaded -> UpdateStatusText(text = "下载完成，正在唤起安装…", positive = true)
+            is UpdateState.Downloaded -> {
+              UpdateStatusText(text = "安装包已缓存到 Download 目录，点击即可安装", positive = true)
+              Button(onClick = { updateManager.install(state.fileUri) }) {
+                Icon(imageVector = Icons.Default.Download, contentDescription = null)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("安装")
+              }
+            }
             is UpdateState.Failed -> {
               UpdateStatusText(text = state.message, positive = false)
               OutlinedButton(onClick = { updateManager.check() }) {
@@ -541,7 +550,7 @@ private fun BasicSettingsSection(
         onSelect = { hex -> appState.setAccentColor(hex) },
       )
       Row(verticalAlignment = Alignment.CenterVertically) {
-        TextButton(onClick = { appState.setAccentColor("") }) {
+        TextButton(onClick = { appState.setAccentColor(DEFAULT_ACCENT_HEX) }) {
           Text("恢复默认颜色")
         }
       }
@@ -621,6 +630,9 @@ private fun AccentColorPalette(
   modifier: Modifier = Modifier,
 ) {
   val selectedNormalized = selectedHex.trim().removePrefix("#").lowercase()
+  val defaultNormalized = DEFAULT_ACCENT_HEX.trim().removePrefix("#").lowercase()
+  // 未显式设置（空值）时，等价于默认青色
+  val effectiveSelected = if (selectedNormalized.isEmpty()) defaultNormalized else selectedNormalized
   FlowRow(
     modifier = modifier.fillMaxWidth(),
     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -628,10 +640,7 @@ private fun AccentColorPalette(
   ) {
     PresetAccentColors.forEach { (label, hex) ->
       val normalized = hex.trim().removePrefix("#").lowercase()
-      val isSelected = normalized == selectedNormalized && selectedNormalized.isNotEmpty()
-      val isDefault = hex.isEmpty()
-      val isDefaultSelected = selectedNormalized.isEmpty()
-      val active = isSelected || (isDefault && isDefaultSelected)
+      val active = normalized == effectiveSelected
       Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -652,7 +661,7 @@ private fun AccentColorPalette(
               .clip(CircleShape)
               .clickable { onSelect(hex) },
             shape = CircleShape,
-            color = if (isDefault) Color(0xFF9CA3AF) else Color(0xFF000000L or (normalized.toLongOrNull(16) ?: 0L)),
+            color = Color(0xFF000000L or (normalized.toLongOrNull(16) ?: 0L)),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)),
             tonalElevation = 0.dp,
             shadowElevation = 0.dp,
@@ -662,7 +671,7 @@ private fun AccentColorPalette(
                 Icon(
                   imageVector = Icons.Default.Check,
                   contentDescription = null,
-                  tint = if (isDefault) Color.White else Color.Black,
+                  tint = Color.Black,
                   modifier = Modifier.size(18.dp),
                 )
               }

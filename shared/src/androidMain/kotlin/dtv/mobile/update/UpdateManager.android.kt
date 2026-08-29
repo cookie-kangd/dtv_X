@@ -1,16 +1,21 @@
 package dtv.mobile.update
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.ContentUris
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
+import android.provider.MediaStore
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import dtv.mobile.util.AppLog
@@ -26,11 +31,16 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 
 /** 检查更新所指向的仓库（发布 Release 的地方） */
 private const val UPDATE_REPO_OWNER = "cookie-kangd"
 private const val UPDATE_REPO_NAME = "dtv_X"
+
+/** 下载到系统 Download 目录的安装包文件名前缀 / 后缀（应用内更新按此命名匹配） */
+private const val APK_PREFIX = "dtv-X-"
+private const val APK_SUFFIX = ".apk"
 
 @Serializable
 private data class GitHubRelease(
@@ -118,29 +128,27 @@ class AndroidUpdateManager(
     scope.launch {
       val result = runCatching {
         withContext(Dispatchers.IO) {
-          val dir = appContext.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: appContext.filesDir
-          if (!dir.exists()) dir.mkdirs()
-          // 清理历史下载，避免堆积
-          dir.listFiles()?.filter { it.name.endsWith(".apk", ignoreCase = true) }?.forEach { it.delete() }
+          // 缓存到系统「Download」公共目录（用户在文件管理器/下载管理中可见），
+          // 而不是应用私有目录；这样即使在设置里授权安装权限后返回，也无需重新下载。
+          val target = createDownloadTarget(info.versionName)
+            ?: error("无法在 Download 目录创建安装包文件")
+          target.outputStream.use { out ->
+            val request = Request.Builder()
+              .url(info.downloadUrl)
+              .header("User-Agent", "DTV-Mobile")
+              .build()
 
-          val target = File(dir, "dtv-X-${info.versionName}.apk")
-          val request = Request.Builder()
-            .url(info.downloadUrl)
-            .header("User-Agent", "DTV-Mobile")
-            .build()
-
-          client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) error("下载失败：HTTP ${response.code}")
-            val body = response.body ?: error("下载失败：空响应")
-            val total = body.contentLength()
-            body.byteStream().use { input ->
-              target.outputStream().use { output ->
+            client.newCall(request).execute().use { response ->
+              if (!response.isSuccessful) error("下载失败：HTTP ${response.code}")
+              val body = response.body ?: error("下载失败：空响应")
+              val total = body.contentLength()
+              body.byteStream().use { input ->
                 val buffer = ByteArray(16 * 1024)
                 var downloaded = 0L
                 while (true) {
                   val read = input.read(buffer)
                   if (read == -1) break
-                  output.write(buffer, 0, read)
+                  out.write(buffer, 0, read)
                   downloaded += read
                   if (total > 0) {
                     val progress = (downloaded.toFloat() / total.toFloat()).coerceIn(0f, 1f)
@@ -150,15 +158,17 @@ class AndroidUpdateManager(
               }
             }
           }
-          target
+          // API 29+ 写完后必须把 IS_PENDING 置 0，否则文件对外不可见、无法安装
+          finishDownloadTarget(target)
+          target.contentUri
         }
       }
 
       result.fold(
-        onSuccess = { file ->
-          AppLog.i("DTV-Update", "downloaded: ${file.absolutePath}")
-          state = UpdateState.Downloaded(file.absolutePath)
-          install(file.absolutePath)
+        onSuccess = { uri ->
+          AppLog.i("DTV-Update", "downloaded: $uri")
+          state = UpdateState.Downloaded(uri.toString())
+          install(uri.toString())
         },
         onFailure = { e ->
           AppLog.e("DTV-Update", "download failed", e)
@@ -170,22 +180,19 @@ class AndroidUpdateManager(
 
   override fun install(fileUri: String) {
     runCatching {
-      val file = File(fileUri)
-      if (!file.exists()) error("安装包不存在")
-      val authority = "${appContext.packageName}.fileprovider"
-      val uri = FileProvider.getUriForFile(appContext, authority, file)
-
-      // Android 8.0+ 必须在"允许安装未知应用"被授权后才能 startActivity 安装第三方包，
-      // 否则 startActivity 会静默失败，用户毫无反应。这里先检查，未授权则跳转到设置。
+      val uri = Uri.parse(fileUri)
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
         !appContext.packageManager.canRequestPackageInstalls()
       ) {
+        // 未授权安装未知来源应用：跳转系统设置。
+        // 关键点：保留「已下载」状态（不置为 Failed），用户授权后返回本页再次点击
+        // 「安装」即可直接安装，不会再触发重新下载。
         val settingsIntent = Intent(
           android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
           android.net.Uri.parse("package:${appContext.packageName}"),
         ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
         appContext.startActivity(settingsIntent)
-        state = UpdateState.Failed("请先在系统设置中允许安装来自此来源的应用，然后重新点击「下载并安装」")
+        state = UpdateState.Downloaded(fileUri)
         return
       }
 
@@ -210,6 +217,90 @@ class AndroidUpdateManager(
     runCatching { scope.cancel() }
   }
 
+  /**
+   * 在系统「Download」公共目录为指定版本创建安装包写入目标。
+   * - API 29+ 走 MediaStore.Downloads（作用域存储正确姿势，文件对用户可见）；
+   * - API < 29 走 Environment.getExternalStoragePublicDirectory + FileProvider。
+   * 返回可直接写入的 OutputStream 以及用于安装的 content:// Uri。
+   */
+  private fun createDownloadTarget(versionName: String): DownloadTarget? {
+    val resolver = appContext.contentResolver
+    val filename = "$APK_PREFIX$versionName$APK_SUFFIX"
+    val authority = "${appContext.packageName}.fileprovider"
+
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      val collection = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+      // 先清掉同名旧文件，避免堆积
+      resolver.query(
+        collection,
+        arrayOf(MediaStore.MediaColumns._ID),
+        "${MediaStore.MediaColumns.DISPLAY_NAME} = ?",
+        arrayOf(filename),
+        null,
+      )?.use { c ->
+        while (c.moveToNext()) {
+          val id = c.getLong(0)
+          resolver.delete(ContentUris.withAppendedId(collection, id), null, null)
+        }
+      }
+      val values = ContentValues().apply {
+        put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+        put(MediaStore.MediaColumns.MIME_TYPE, "application/vnd.android.package-archive")
+        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        put(MediaStore.MediaColumns.IS_PENDING, 1)
+      }
+      val uri = resolver.insert(collection, values) ?: return null
+      val out = resolver.openOutputStream(uri) ?: return null
+      DownloadTarget(uri, out)
+    } else {
+      val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+      if (!dir.exists()) dir.mkdirs()
+      val file = File(dir, filename)
+      if (file.exists()) file.delete()
+      val uri = FileProvider.getUriForFile(appContext, authority, file)
+      DownloadTarget(uri, file.outputStream())
+    }
+  }
+
+  private fun finishDownloadTarget(target: DownloadTarget) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      val values = ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }
+      runCatching { appContext.contentResolver.update(target.contentUri, values, null, null) }
+    }
+  }
+
+  /**
+   * 清理已安装（版本 <= 当前版本）的缓存安装包。
+   * 刚下载、等待安装的新版本（版本 > 当前版本）会保留，确保用户在授予安装权限返回后
+   * 无需重新下载；安装完成、再次打开 App 时该缓存文件版本 == 当前版本，在此处被清理掉。
+   */
+  fun cleanupInstalledApks() {
+    if (currentVersionName.isBlank()) return
+    runCatching {
+      val resolver = appContext.contentResolver
+      val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        MediaStore.Downloads.EXTERNAL_CONTENT_URI
+      } else {
+        MediaStore.Files.getContentUri("external")
+      }
+      val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME)
+      val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ?"
+      val selectionArgs = arrayOf("$APK_PREFIX%$APK_SUFFIX")
+      resolver.query(collection, projection, selection, selectionArgs, null)?.use { c ->
+        val idIdx = c.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+        val nameIdx = c.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+        while (c.moveToNext()) {
+          val name = c.getString(nameIdx)
+          val ver = name.removePrefix(APK_PREFIX).removeSuffix(APK_SUFFIX)
+          if (compareVersion(ver, currentVersionName) <= 0) {
+            val id = c.getLong(idIdx)
+            resolver.delete(ContentUris.withAppendedId(collection, id), null, null)
+          }
+        }
+      }
+    }
+  }
+
   private suspend fun fetchLatestRelease(): GitHubRelease = withContext(Dispatchers.IO) {
     val url = "https://api.github.com/repos/$UPDATE_REPO_OWNER/$UPDATE_REPO_NAME/releases/latest"
     val request = Request.Builder()
@@ -232,5 +323,10 @@ actual fun rememberUpdateManager(): UpdateManager {
   DisposableEffect(manager) {
     onDispose { manager.dispose() }
   }
+  // 进入设置页即清理掉「已安装版本」的残留缓存包，避免 Download 目录堆积
+  LaunchedEffect(manager) { manager.cleanupInstalledApks() }
   return manager
 }
+
+/** 下载写入目标：用于写入字节的流 + 用于安装（content://）的 Uri */
+private data class DownloadTarget(val contentUri: Uri, val outputStream: OutputStream)
