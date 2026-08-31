@@ -15,12 +15,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -73,6 +75,17 @@ fun RootScaffold(appState: AppState) {
   var showBilibiliLoginSheet by remember { mutableStateOf(false) }
   var bilibiliLoggedIn by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
+
+  var homeRefreshing by remember { mutableStateOf(false) }
+  val onHomeRefresh: () -> Unit = l@{
+    if (homeRefreshing) return@l
+    scope.launch {
+      homeRefreshing = true
+      runCatching { appState.refreshFollowedStreamerCards() }
+      runCatching { appState.refreshFollowedLiveStatus() }
+      homeRefreshing = false
+    }
+  }
 
   LaunchedEffect(Unit) {
     if (appState.followedStreamers.isNotEmpty()) {
@@ -154,6 +167,9 @@ fun RootScaffold(appState: AppState) {
             showSearch = appState.currentScreen != Screen.Home,
             showPlatformActions = appState.currentScreen == Screen.Platform,
             showSettings = appState.currentScreen == Screen.Home,
+            showRefresh = appState.currentScreen == Screen.Home,
+            refreshing = homeRefreshing,
+            onRefreshClick = onHomeRefresh,
             onSettingsClick = appState::openSettings,
           )
         }
@@ -229,6 +245,9 @@ private fun HubTopBar(
   showSearch: Boolean,
   showPlatformActions: Boolean,
   showSettings: Boolean,
+  showRefresh: Boolean,
+  refreshing: Boolean,
+  onRefreshClick: () -> Unit,
   onSettingsClick: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -308,6 +327,24 @@ private fun HubTopBar(
             subscribed = isPartitionSubscribed(currentPartition),
             onToggle = onToggleSubscription,
           )
+        }
+      }
+
+      if (showRefresh) {
+        IconButton(onClick = onRefreshClick, enabled = !refreshing) {
+          if (refreshing) {
+            CircularProgressIndicator(
+              modifier = Modifier.size(20.dp),
+              strokeWidth = 2.dp,
+              color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+            )
+          } else {
+            Icon(
+              imageVector = Icons.Default.Refresh,
+              contentDescription = "刷新",
+              tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+            )
+          }
         }
       }
 
