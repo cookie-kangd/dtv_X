@@ -157,6 +157,11 @@ fun PlayerScreen(
   var fullscreenEntry by remember(streamer?.roomId) {
     mutableStateOf(if (appState.landscapeEnabled) FullscreenEntry.Manual else FullscreenEntry.None)
   }
+  // 关闭直播间标记：一旦置位，FullscreenEffect 不再允许重新锁定横屏，并强制回落竖屏，
+  // 彻底消除「退出瞬间先横屏闪一下再回竖屏」的 BUG。
+  // 根因：关闭过程中 streamer 会短暂变化，触发 remember(streamer?.roomId) 重新初始化，
+  // 把 fullscreen/fullscreenEntry 复位成「默认横屏」状态，画面在 dispose 前闪现横屏。
+  var isClosing by remember { mutableStateOf(false) }
 
   val scope = rememberCoroutineScope()
 
@@ -172,6 +177,7 @@ fun PlayerScreen(
   // 横屏，结束 dispose 时才回落竖屏——表现为「先横屏闪一下再恢复竖屏」的 BUG。
   // 系统返回键走 PlatformBackHandler 已做过同样的切换，这里让 X 按钮也走同一条路径。
   val requestClose: () -> Unit = {
+    isClosing = true
     if (fullscreen) {
       fullscreen = false
       fullscreenEntry = if (fullscreenEntry == FullscreenEntry.Manual) {
@@ -351,26 +357,23 @@ fun PlayerScreen(
     val isLandscapeLayout = !isPortraitLayout
 
     FullscreenEffect(
-      enabled = fullscreen,
-      lockLandscape = fullscreenEntry == FullscreenEntry.Manual,
-      exitToPortrait = fullscreenEntry == FullscreenEntry.ManualOff,
+      enabled = fullscreen && !isClosing,
+      lockLandscape = fullscreenEntry == FullscreenEntry.Manual && !isClosing,
+      exitToPortrait = fullscreenEntry == FullscreenEntry.ManualOff || isClosing,
     )
     PlatformBackHandler(enabled = fullscreen) {
       if (fullscreenEntry == FullscreenEntry.Auto) {
-        // 横屏旋转自动进入的全屏：第一次返回直接退出播放器。
-        // 否则会先"退出全屏"，但手机仍处横屏、界面几乎无变化，导致需要按两次才退出。
+        // 横屏旋转自动进入的全屏：第一次返回直接退出播放器。先置位关闭标记再退，避免闪横屏。
+        isClosing = true
         appState.back()
-      } else {
+      } else if (fullscreenEntry == FullscreenEntry.Manual) {
+        // 手动锁定横屏（含「默认横屏」进入直播间）返回时先转回竖屏，仍停留在播放器内。
         fullscreen = false
-        // 关键修复：手动锁定横屏（含「默认横屏」进入直播间）退出时必须主动转回竖屏。
-        // 原先这里一律置为 None，方向只会恢复为 UNSPECIFIED；但此时屏幕已被系统锁在横屏、
-        // 重力传感器同样判定为横屏，于是退出 App 后桌面与系统栏会一直保持横屏。
-        // 置为 ManualOff 才会请求 SENSOR_PORTRAIT，确保只在播放器内横屏。
-        fullscreenEntry = if (fullscreenEntry == FullscreenEntry.Manual) {
-          FullscreenEntry.ManualOff
-        } else {
-          FullscreenEntry.None
-        }
+        fullscreenEntry = FullscreenEntry.ManualOff
+      } else {
+        // 已是竖屏（ManualOff -> None）：退出播放器，强制保持竖屏。
+        isClosing = true
+        appState.back()
       }
     }
 
@@ -524,6 +527,7 @@ fun PlayerScreen(
       loading
 
     LaunchedEffect(isLandscapeLayout) {
+      if (isClosing) return@LaunchedEffect
       // Rotating to landscape should behave like fullscreen (hide bottom bar, system bars).
       if (isLandscapeLayout && !fullscreen && fullscreenEntry != FullscreenEntry.ManualOff) {
         fullscreen = true
@@ -714,6 +718,7 @@ fun PlayerScreen(
               fullscreen = fullscreen,
               showFullscreen = isVideoAspectKnown && !isVerticalVideo,
               onToggleFullscreen = {
+                if (isClosing) return@onToggleFullscreen
                 if (fullscreen) {
                   fullscreen = false
                   fullscreenEntry = if (isLandscapeLayout) FullscreenEntry.ManualOff else FullscreenEntry.None

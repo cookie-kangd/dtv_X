@@ -330,31 +330,36 @@ private fun HubTopBar(
         }
       }
 
-      if (showRefresh) {
-        IconButton(onClick = onRefreshClick, enabled = !refreshing) {
-          if (refreshing) {
-            CircularProgressIndicator(
-              modifier = Modifier.size(20.dp),
-              strokeWidth = 2.dp,
-              color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-            )
-          } else {
+      Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+      ) {
+        if (showRefresh) {
+          IconButton(onClick = onRefreshClick, enabled = !refreshing) {
+            if (refreshing) {
+              CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+              )
+            } else {
+              Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = "刷新",
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+              )
+            }
+          }
+        }
+
+        if (showSettings) {
+          IconButton(onClick = onSettingsClick) {
             Icon(
-              imageVector = Icons.Default.Refresh,
-              contentDescription = "刷新",
+              imageVector = Icons.Default.Settings,
+              contentDescription = "设置",
               tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
             )
           }
-        }
-      }
-
-      if (showSettings) {
-        IconButton(onClick = onSettingsClick) {
-          Icon(
-            imageVector = Icons.Default.Settings,
-            contentDescription = "设置",
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-          )
         }
       }
     }

@@ -52,13 +52,8 @@ fun SearchScreen(
   var showBilibiliLoginSheet by remember { mutableStateOf(false) }
   var bilibiliLoggedIn by remember { mutableStateOf(false) }
 
-  val placeholder = when (platform) {
-    Platform.Huya -> "搜索虎牙主播/房间..."
-    Platform.Bilibili -> "搜索B站直播间..."
-    Platform.Douyin -> "输入抖音房间号（webRid）..."
-    Platform.Custom -> "自定义分区暂不支持搜索"
-    else -> "搜索斗鱼主播/房间..."
-  }
+  // 各平台板块的搜索框占位文案统一为「搜索」，避免「搜索斗鱼主播/房间...」等长文案在窄屏下换行。
+  val placeholder = "搜索"
 
   LaunchedEffect(platform, query) {
     val trimmed = query.trim()
