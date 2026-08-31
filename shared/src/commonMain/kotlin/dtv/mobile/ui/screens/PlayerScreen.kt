@@ -718,13 +718,14 @@ fun PlayerScreen(
               fullscreen = fullscreen,
               showFullscreen = isVideoAspectKnown && !isVerticalVideo,
               onToggleFullscreen = {
-                if (isClosing) return@onToggleFullscreen
-                if (fullscreen) {
-                  fullscreen = false
-                  fullscreenEntry = if (isLandscapeLayout) FullscreenEntry.ManualOff else FullscreenEntry.None
-                } else {
-                  fullscreen = true
-                  fullscreenEntry = FullscreenEntry.Manual
+                if (!isClosing) {
+                  if (fullscreen) {
+                    fullscreen = false
+                    fullscreenEntry = if (isLandscapeLayout) FullscreenEntry.ManualOff else FullscreenEntry.None
+                  } else {
+                    fullscreen = true
+                    fullscreenEntry = FullscreenEntry.Manual
+                  }
                 }
               },
               onOpenSettings = { showSettings = true },
