@@ -361,17 +361,28 @@ fun PlayerScreen(
       lockLandscape = fullscreenEntry == FullscreenEntry.Manual && !isClosing,
       exitToPortrait = fullscreenEntry == FullscreenEntry.ManualOff || isClosing,
     )
-    PlatformBackHandler(enabled = fullscreen) {
+    // 手势返回（含安卓系统手势返回 / 三键返回）统一在此拦截：
+    // 默认横屏进入直播间后第一次返回 -> 退出全屏、转回竖屏、仍停留在播放器内；
+    // 已竖屏后再返回（或自动全屏返回）-> 关闭播放器，关闭前先置 isClosing。
+    // 关键点：enabled 必须为 true（常驻拦截）。若只在 fullscreen 时拦截，
+    // 第一次返回后 fullscreen 已变 false，第二次手势返回会绕过本处理器、直接走上层
+    // appState.back() 关闭播放器且未置 isClosing，关闭过程中 streamer 变化会触发
+    // fullscreen/fullscreenEntry 重新初始化成横屏，导致 FullscreenEffect 再次锁横屏而「闪一下」。
+    PlatformBackHandler(enabled = true) {
       if (fullscreenEntry == FullscreenEntry.Auto) {
-        // 横屏旋转自动进入的全屏：第一次返回直接退出播放器。先置位关闭标记再退，避免闪横屏。
+        // 横屏旋转自动进入的全屏：返回直接退出播放器，并置位关闭标记避免闪横屏。
         isClosing = true
         appState.back()
-      } else if (fullscreenEntry == FullscreenEntry.Manual) {
-        // 手动锁定横屏（含「默认横屏」进入直播间）返回时先转回竖屏，仍停留在播放器内。
+      } else if (fullscreen) {
+        // 手动横屏（含「默认横屏」进入直播间）第一次返回：离开全屏、转回竖屏，仍停留在播放器内。
         fullscreen = false
-        fullscreenEntry = FullscreenEntry.ManualOff
+        fullscreenEntry = if (fullscreenEntry == FullscreenEntry.Manual) {
+          FullscreenEntry.ManualOff
+        } else {
+          FullscreenEntry.None
+        }
       } else {
-        // 已是竖屏（ManualOff -> None）：退出播放器，强制保持竖屏。
+        // 已处于竖屏（ManualOff / None）：退出播放器，isClosing 守卫确保全程保持竖屏。
         isClosing = true
         appState.back()
       }

@@ -2,6 +2,7 @@ package dtv.mobile.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
@@ -56,6 +57,7 @@ import dtv.mobile.ui.screens.PlayerScreen
 import dtv.mobile.ui.screens.SearchScreen
 import dtv.mobile.ui.screens.SettingsScreen
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import dtv.mobile.ui.system.PlatformBackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -332,10 +334,17 @@ private fun HubTopBar(
 
       Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
       ) {
         if (showRefresh) {
-          IconButton(onClick = onRefreshClick, enabled = !refreshing) {
+          // 用 Box + clickable 取代默认 48dp 触摸尺寸的 IconButton，
+          // 让刷新/设置两个图标在顶栏真正贴近（视觉间隙从约 28dp 收到约 8dp）。
+          Box(
+            modifier = Modifier
+              .size(36.dp)
+              .clickable(enabled = !refreshing, onClick = onRefreshClick, role = Role.Button),
+            contentAlignment = Alignment.Center,
+          ) {
             if (refreshing) {
               CircularProgressIndicator(
                 modifier = Modifier.size(20.dp),
@@ -346,6 +355,7 @@ private fun HubTopBar(
               Icon(
                 imageVector = Icons.Default.Refresh,
                 contentDescription = "刷新",
+                modifier = Modifier.size(22.dp),
                 tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
               )
             }
@@ -353,10 +363,16 @@ private fun HubTopBar(
         }
 
         if (showSettings) {
-          IconButton(onClick = onSettingsClick) {
+          Box(
+            modifier = Modifier
+              .size(36.dp)
+              .clickable(onClick = onSettingsClick, role = Role.Button),
+            contentAlignment = Alignment.Center,
+          ) {
             Icon(
               imageVector = Icons.Default.Settings,
               contentDescription = "设置",
+              modifier = Modifier.size(22.dp),
               tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
             )
           }
