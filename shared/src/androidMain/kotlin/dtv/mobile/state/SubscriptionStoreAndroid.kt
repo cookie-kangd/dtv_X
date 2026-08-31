@@ -131,4 +131,26 @@ class SubscriptionStoreAndroid(
   override fun saveLandscapeEnabled(value: Boolean) {
     prefs.edit().putBoolean("landscape_enabled", value).apply()
   }
+
+  // 平台排列顺序（按枚举名保存）。为空表示尚未自定义，由 AppState 回落到默认顺序。
+  override fun loadPlatformOrder(): List<String> {
+    val raw = prefs.getString("platform_order", null)?.takeIf { it.isNotBlank() } ?: return emptyList()
+    return runCatching { json.decodeFromString(ListSerializer(String.serializer()), raw) }.getOrElse { emptyList() }
+  }
+
+  override fun savePlatformOrder(items: List<String>) {
+    val raw = json.encodeToString(ListSerializer(String.serializer()), items)
+    prefs.edit().putString("platform_order", raw).apply()
+  }
+
+  // 被关闭的平台（按枚举名保存），默认全部开启
+  override fun loadPlatformDisabled(): List<String> {
+    val raw = prefs.getString("platform_disabled", null)?.takeIf { it.isNotBlank() } ?: return emptyList()
+    return runCatching { json.decodeFromString(ListSerializer(String.serializer()), raw) }.getOrElse { emptyList() }
+  }
+
+  override fun savePlatformDisabled(items: List<String>) {
+    val raw = json.encodeToString(ListSerializer(String.serializer()), items)
+    prefs.edit().putString("platform_disabled", raw).apply()
+  }
 }

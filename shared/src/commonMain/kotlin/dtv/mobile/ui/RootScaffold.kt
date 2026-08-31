@@ -167,6 +167,7 @@ fun RootScaffold(appState: AppState) {
           onHomeClick = appState::openHome,
           onPlatformClick = appState::selectPlatform,
           switchingLoading = appState.platformSwitchLoading,
+          platforms = appState.visiblePlatforms,
         )
       }
     },

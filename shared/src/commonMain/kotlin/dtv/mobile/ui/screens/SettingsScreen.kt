@@ -1,14 +1,17 @@
 package dtv.mobile.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
@@ -41,17 +45,25 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import dtv.mobile.model.Platform
 import dtv.mobile.state.AppState
 import dtv.mobile.state.ThemeMode
 import dtv.mobile.state.VideoQuality
@@ -59,8 +71,10 @@ import dtv.mobile.ui.system.PlatformBackHandler
 import dtv.mobile.update.AppUpdateInfo
 import dtv.mobile.update.UpdateState
 import dtv.mobile.update.rememberUpdateManager
+import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 
-private enum class SettingsSection { Root, Basic, Sync }
+private enum class SettingsSection { Root, Basic, Sync, Platform }
 
 private val PresetAccentColors = listOf(
   "青柠" to "#A3E635",
@@ -94,6 +108,7 @@ fun SettingsScreen(
     SettingsSection.Root -> SettingsRoot(
       onOpenBasic = { section = SettingsSection.Basic },
       onOpenSync = { section = SettingsSection.Sync },
+      onOpenPlatform = { section = SettingsSection.Platform },
       modifier = modifier.fillMaxSize(),
     )
     SettingsSection.Basic -> BasicSettingsSection(
@@ -106,6 +121,11 @@ fun SettingsScreen(
       onBack = { section = SettingsSection.Root },
       modifier = modifier.fillMaxSize(),
     )
+    SettingsSection.Platform -> PlatformSettingsSection(
+      appState = appState,
+      onBack = { section = SettingsSection.Root },
+      modifier = modifier.fillMaxSize(),
+    )
   }
 }
 
@@ -113,6 +133,7 @@ fun SettingsScreen(
 private fun SettingsRoot(
   onOpenBasic: () -> Unit,
   onOpenSync: () -> Unit,
+  onOpenPlatform: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   Column(
@@ -123,6 +144,12 @@ private fun SettingsRoot(
       title = "基本设置",
       subtitle = "记住栏目、主题模式、全局颜色",
       onClick = onOpenBasic,
+    )
+    SettingsItemRow(
+      icon = { Icon(imageVector = Icons.Default.LiveTv, contentDescription = null) },
+      title = "平台设置",
+      subtitle = "平台启用开关与切换栏排序",
+      onClick = onOpenPlatform,
     )
     SettingsItemRow(
       icon = { Icon(imageVector = Icons.Default.Devices, contentDescription = null) },
@@ -417,6 +444,236 @@ private fun SettingsCard(
     shadowElevation = 0.dp,
   ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp), content = content)
+  }
+}
+
+@Composable
+private fun PlatformSettingsSection(
+  appState: AppState,
+  onBack: () -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  var notice by remember { mutableStateOf<String?>(null) }
+
+  // 操作提示展示数秒后自动消失
+  LaunchedEffect(notice) {
+    val shown = notice ?: return@LaunchedEffect
+    delay(2800)
+    if (notice == shown) notice = null
+  }
+
+  Column(
+    modifier = modifier
+      .verticalScroll(rememberScrollState())
+      .padding(horizontal = 18.dp, vertical = 6.dp),
+    verticalArrangement = Arrangement.spacedBy(10.dp),
+  ) {
+    SettingsSectionHeader(title = "平台设置", onBack = onBack)
+
+    // 提示条
+    if (notice != null) {
+      Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+      ) {
+        Text(
+          text = notice.orEmpty(),
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.primary,
+          modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+        )
+      }
+    }
+
+    // 平台启用（默认全部开启）
+    SettingsCard {
+      Text("平台启用", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+      Spacer(modifier = Modifier.height(2.dp))
+      Text(
+        text = "默认全部开启。关闭后该平台会立即从下方切换栏移除，重新开启后自动加回。",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+      )
+      Spacer(modifier = Modifier.height(6.dp))
+      appState.platformOrder.forEach { platform ->
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Text(
+            text = platform.title,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f),
+          )
+          Switch(
+            checked = platform !in appState.platformDisabled,
+            onCheckedChange = { enabled ->
+              appState.updatePlatformEnabled(platform, enabled)
+              notice = if (enabled) {
+                "已开启「${platform.title}」，已加回下方切换栏（无需重启）"
+              } else {
+                "已关闭「${platform.title}」，已从下方切换栏移除（无需重启）"
+              }
+            },
+          )
+        }
+      }
+    }
+
+    // 平台排序（拖拽）
+    SettingsCard {
+      Text("平台排序", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+      Spacer(modifier = Modifier.height(2.dp))
+      Text(
+        text = "长按右侧手柄上下拖动即可调整顺序，下方切换栏会立即按新顺序排列。",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+      )
+      Spacer(modifier = Modifier.height(10.dp))
+      if (appState.visiblePlatforms.isEmpty()) {
+        Text(
+          text = "当前没有已启用的平台，请先在上方开启至少一个平台。",
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+        )
+      } else {
+        PlatformReorderList(
+          platforms = appState.visiblePlatforms,
+          onReorder = { notice = "顺序已更新：${appState.visiblePlatforms.joinToString(" · ") { it.title }}（无需重启）" },
+          onMove = { from, to -> appState.moveVisiblePlatform(from, to) },
+        )
+      }
+    }
+  }
+}
+
+/** 可长按拖拽排序的纵向列表（仅用于平台排序，条目数很少，无需 LazyColumn）。 */
+@Composable
+private fun PlatformReorderList(
+  platforms: List<Platform>,
+  onMove: (fromIndex: Int, toIndex: Int) -> Unit,
+  onReorder: () -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  val itemHeight = 52.dp
+  val gap = 8.dp
+  val density = LocalDensity.current
+  val itemHeightPx = with(density) { itemHeight.toPx() }
+  val gapPx = with(density) { gap.toPx() }
+  val stride = itemHeightPx + gapPx
+
+  // 拖拽中记录的是"平台"本身而非索引：拖拽过程中列表会重排，
+  // 用索引会被中途的位置变化打乱，用身份则每次都能算出正确的目标位置。
+  var draggingPlatform by remember { mutableStateOf<Platform?>(null) }
+  var dragOffset by remember { mutableStateOf(0f) }
+  // pointerInput 的 key 固定为 Unit，避免列表变化时手势被重启而中断拖拽；
+  // 列表内容通过 rememberUpdatedState 读取，保证回调里拿到的是最新顺序。
+  val latestList by rememberUpdatedState(platforms)
+
+  Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(gap)) {
+    platforms.forEach { platform ->
+      val isDragging = draggingPlatform == platform
+      Surface(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(itemHeight)
+          .zIndex(if (isDragging) 1f else 0f)
+          .offset { IntOffset(0, (if (isDragging) dragOffset else 0f).roundToInt()) }
+          .pointerInput(Unit) {
+            detectDragGesturesAfterLongPress(
+              onDragStart = {
+                draggingPlatform = platform
+                dragOffset = 0f
+              },
+              onDragEnd = {
+                if (draggingPlatform != null) {
+                  draggingPlatform = null
+                  dragOffset = 0f
+                  onReorder()
+                }
+              },
+              onDragCancel = {
+                draggingPlatform = null
+                dragOffset = 0f
+              },
+              onDrag = { change, dragAmount ->
+                change.consume()
+                val list = latestList
+                val from = list.indexOf(platform)
+                if (from < 0) return@detectDragGesturesAfterLongPress
+
+                dragOffset += dragAmount.y
+                // 每拖过约一行的距离就与相邻项交换一次
+                val step = (dragOffset / stride).roundToInt()
+                if (step != 0) {
+                  val target = (from + step).coerceIn(0, list.lastIndex)
+                  if (target != from) {
+                    onMove(from, target)
+                    dragOffset -= (target - from) * stride
+                  }
+                }
+              },
+            )
+          },
+        shape = RoundedCornerShape(12.dp),
+        color = if (isDragging) {
+          MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+        } else {
+          MaterialTheme.colorScheme.surface.copy(alpha = 0.75f)
+        },
+        border = BorderStroke(
+          1.dp,
+          if (isDragging) {
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+          } else {
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)
+          },
+        ),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+      ) {
+        Row(
+          modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 12.dp),
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+          Text(
+            text = platform.title,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1f),
+          )
+          DragHandleIcon(
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isDragging) 0.85f else 0.45f),
+          )
+        }
+      }
+    }
+  }
+}
+
+/** 简单的六点拖拽手柄（用 Canvas 画，不依赖扩展图标库）。 */
+@Composable
+private fun DragHandleIcon(
+  tint: Color,
+  modifier: Modifier = Modifier,
+) {
+  Canvas(modifier = modifier.size(width = 18.dp, height = 22.dp)) {
+    val radius = 1.7.dp.toPx()
+    val xs = listOf(size.width * 0.3f, size.width * 0.7f)
+    val ys = listOf(size.height * 0.2f, size.height * 0.5f, size.height * 0.8f)
+    for (y in ys) {
+      for (x in xs) {
+        drawCircle(color = tint, radius = radius, center = Offset(x, y))
+      }
+    }
   }
 }
 

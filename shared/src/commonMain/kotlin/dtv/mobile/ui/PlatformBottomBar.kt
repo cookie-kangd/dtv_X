@@ -42,6 +42,8 @@ fun PlatformBottomBar(
   onHomeClick: () -> Unit,
   onPlatformClick: (Platform) -> Unit,
   switchingLoading: Boolean = false,
+  // 由「设置-平台设置」决定：只包含已启用的平台，且按用户拖拽后的顺序排列
+  platforms: List<Platform> = Platform.entries.filter { it != Platform.Custom },
 ) {
   val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
   val containerColor = MaterialTheme.colorScheme.surface.copy(alpha = if (isDark) 0.92f else 0.98f)
@@ -79,7 +81,7 @@ fun PlatformBottomBar(
         )
       }
 
-      Platform.entries.filter { it != Platform.Custom }.forEach { platform ->
+      platforms.forEach { platform ->
         val isSelected = selectedScreen == Screen.Platform && platform == selectedPlatform
         DockItem(
           selected = isSelected,

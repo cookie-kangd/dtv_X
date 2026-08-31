@@ -52,6 +52,14 @@ interface SubscriptionStore {
 
   fun loadLandscapeEnabled(): Boolean
   fun saveLandscapeEnabled(value: Boolean)
+
+  // 平台设置：底部切换栏显示哪些平台，以及它们的排列顺序。
+  // 两者都按"平台枚举名"持久化，避免 Platform 枚举顺序变动导致的历史数据错位。
+  fun loadPlatformOrder(): List<String>
+  fun savePlatformOrder(items: List<String>)
+
+  fun loadPlatformDisabled(): List<String>
+  fun savePlatformDisabled(items: List<String>)
 }
 
 object InMemorySubscriptionStore : SubscriptionStore {
@@ -69,6 +77,8 @@ object InMemorySubscriptionStore : SubscriptionStore {
   private var compactCardEnabled: Boolean = true
   private var videoQuality: String = VideoQuality.Highest.name
   private var landscapeEnabled: Boolean = false
+  private var platformOrder: List<String> = emptyList()
+  private var platformDisabled: List<String> = emptyList()
 
   override fun loadThemeMode(): ThemeMode = themeMode
 
@@ -152,5 +162,17 @@ object InMemorySubscriptionStore : SubscriptionStore {
 
   override fun saveLandscapeEnabled(value: Boolean) {
     landscapeEnabled = value
+  }
+
+  override fun loadPlatformOrder(): List<String> = platformOrder
+
+  override fun savePlatformOrder(items: List<String>) {
+    platformOrder = items.toList()
+  }
+
+  override fun loadPlatformDisabled(): List<String> = platformDisabled
+
+  override fun savePlatformDisabled(items: List<String>) {
+    platformDisabled = items.toList()
   }
 }

@@ -22,6 +22,10 @@
 **/out/
 **/.DS_Store
 
+# 本地助手工作目录（记忆 / 缓存），不进仓库
+/.workbuddy/
+**/.workbuddy/
+
 # Do not publish desktop project
 /DTV-heroui/
 

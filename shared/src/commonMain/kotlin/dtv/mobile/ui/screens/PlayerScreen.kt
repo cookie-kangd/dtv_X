@@ -346,7 +346,15 @@ fun PlayerScreen(
         appState.back()
       } else {
         fullscreen = false
-        fullscreenEntry = FullscreenEntry.None
+        // 关键修复：手动锁定横屏（含「默认横屏」进入直播间）退出时必须主动转回竖屏。
+        // 原先这里一律置为 None，方向只会恢复为 UNSPECIFIED；但此时屏幕已被系统锁在横屏、
+        // 重力传感器同样判定为横屏，于是退出 App 后桌面与系统栏会一直保持横屏。
+        // 置为 ManualOff 才会请求 SENSOR_PORTRAIT，确保只在播放器内横屏。
+        fullscreenEntry = if (fullscreenEntry == FullscreenEntry.Manual) {
+          FullscreenEntry.ManualOff
+        } else {
+          FullscreenEntry.None
+        }
       }
     }
 

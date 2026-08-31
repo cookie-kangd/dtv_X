@@ -20,6 +20,9 @@ data class SubscribedPartition(
   val platform: Platform? = null,
 )
 
+/** 会占用底部切换栏入口的平台（「自定义」不占底部栏），默认顺序即枚举声明顺序。 */
+private val DOCK_PLATFORMS: List<Platform> = Platform.entries.filter { it != Platform.Custom }
+
 class AppState(
   val repo: DtvRepository,
   private val subscriptionStore: SubscriptionStore,
@@ -36,6 +39,18 @@ class AppState(
   var accentColorHex: String by mutableStateOf("")
   var platformSwitchLoading: Boolean by mutableStateOf(false)
   var selectedPlatform: Platform by mutableStateOf(Platform.Douyu)
+
+  /** 底部切换栏的完整排列顺序（含被关闭的平台，用于重新启用时还原位置）。 */
+  var platformOrder: List<Platform> by mutableStateOf(DOCK_PLATFORMS)
+    private set
+
+  /** 被用户关闭的平台集合，默认全部开启。 */
+  var platformDisabled: Set<Platform> by mutableStateOf(emptySet())
+    private set
+
+  /** 底部切换栏实际展示的平台：按用户自定义顺序，仅含已启用的平台。 */
+  val visiblePlatforms: List<Platform>
+    get() = platformOrder.filter { it !in platformDisabled }
   var currentScreen: Screen by mutableStateOf(Screen.Home)
   var currentStreamer: Streamer? by mutableStateOf(null)
   private var playerReturnScreen: Screen? by mutableStateOf(null)
@@ -63,6 +78,10 @@ class AppState(
     videoQuality = VideoQuality.fromNameOrHighest(subscriptionStore.loadVideoQuality())
     landscapeEnabled = subscriptionStore.loadLandscapeEnabled()
     accentColorHex = subscriptionStore.loadAccentColorHex()
+    platformOrder = loadPlatformOrder()
+    platformDisabled = loadPlatformDisabled()
+    // 历史数据里选中的平台可能已被关闭，启动时校正一次
+    if (selectedPlatform in platformDisabled) switchToFirstVisiblePlatform()
 
     subscriptionStore.loadRememberedCategoryByPlatform().forEach { entry ->
       rememberedCategoryByPlatform[entry.platform] = entry.partitionId
@@ -165,6 +184,67 @@ class AppState(
   fun updateLandscapeEnabled(enabled: Boolean) {
     landscapeEnabled = enabled
     subscriptionStore.saveLandscapeEnabled(enabled)
+  }
+
+  private fun loadPlatformOrder(): List<Platform> {
+    val saved = subscriptionStore.loadPlatformOrder()
+      .mapNotNull { name -> runCatching { Platform.valueOf(name) }.getOrNull() }
+      .filter { it != Platform.Custom }
+      .distinct()
+    val merged = saved.toMutableList()
+    // 兼容后续新增的平台：历史数据里没有的一律追加到末尾
+    DOCK_PLATFORMS.forEach { platform -> if (platform !in merged) merged.add(platform) }
+    return merged
+  }
+
+  private fun loadPlatformDisabled(): Set<Platform> =
+    subscriptionStore.loadPlatformDisabled()
+      .mapNotNull { name -> runCatching { Platform.valueOf(name) }.getOrNull() }
+      .toSet()
+
+  /** 开关某个平台在底部切换栏的显示。关闭后该平台会立即从切换栏移除。 */
+  fun updatePlatformEnabled(platform: Platform, enabled: Boolean) {
+    if (platform == Platform.Custom) return
+    val next = platformDisabled.toMutableSet()
+    if (enabled) next.remove(platform) else next.add(platform)
+    platformDisabled = next
+    subscriptionStore.savePlatformDisabled(next.map { it.name })
+    // 当前正停留在该平台时，切到第一个仍可见的平台，避免停留在空页面
+    if (selectedPlatform in platformDisabled) switchToFirstVisiblePlatform()
+  }
+
+  /** 拖拽排序（索引基于可见平台列表）。 */
+  fun moveVisiblePlatform(fromIndex: Int, toIndex: Int) {
+    val visible = visiblePlatforms.toMutableList()
+    if (fromIndex == toIndex) return
+    if (fromIndex !in visible.indices) return
+    if (toIndex !in visible.indices) return
+
+    val item = visible.removeAt(fromIndex)
+    visible.add(toIndex, item)
+
+    // 把新的可见顺序写回全量顺序表：只覆盖"可见槽位"，
+    // 被关闭平台所在槽位保持不动，因此重新启用后会回到原来的相对位置。
+    val slots = platformOrder.indices.filter { platformOrder[it] !in platformDisabled }
+    val next = platformOrder.toMutableList()
+    visible.forEachIndexed { i, platform -> next[slots[i]] = platform }
+    platformOrder = next
+    subscriptionStore.savePlatformOrder(next.map { it.name })
+  }
+
+  private fun switchToFirstVisiblePlatform() {
+    val first = visiblePlatforms.firstOrNull()
+    if (first == null) {
+      // 所有平台都被关闭：退回首页，避免停留在无内容的平台页
+      currentPartition = null
+      currentScreen = Screen.Home
+      return
+    }
+    selectedPlatform = first
+    currentPartition = null
+    if (currentScreen == Screen.Platform || currentScreen == Screen.Search) {
+      currentScreen = Screen.Home
+    }
   }
 
 

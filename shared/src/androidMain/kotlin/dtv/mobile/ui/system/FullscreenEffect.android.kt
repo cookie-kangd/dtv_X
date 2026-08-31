@@ -24,7 +24,12 @@ actual fun FullscreenEffect(
   DisposableEffect(view, window, enabled, lockLandscape, exitToPortrait) {
     val controller = WindowCompat.getInsetsController(window, view)
     val prevBehavior = controller.systemBarsBehavior
+    // 记录进入前的方向以便退出时还原。若拿到的是横屏值（例如上一个效果异常结束留下的），
+    // 则回落到 UNSPECIFIED，否则会把"横屏"固化成 App 的静止方向，
+    // 导致退出 App 后桌面/系统栏也跟着横屏。
     val prevOrientation = activity.requestedOrientation
+      .takeUnless { it.isLandscapeOrientation() }
+      ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
     if (enabled) {
@@ -56,4 +61,15 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
   is Activity -> this
   is ContextWrapper -> baseContext.findActivity()
   else -> null
+}
+
+/** 判断某个 requestedOrientation 是否会把界面锁定为横屏。 */
+private fun Int.isLandscapeOrientation(): Boolean = when (this) {
+  ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE,
+  ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE,
+  ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE,
+  ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE,
+  -> true
+
+  else -> false
 }
