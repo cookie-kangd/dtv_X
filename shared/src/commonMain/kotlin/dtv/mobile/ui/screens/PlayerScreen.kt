@@ -167,6 +167,22 @@ fun PlayerScreen(
     appState.playerFullscreen = fullscreen
   }
 
+  // 关闭直播间（X 按钮 / 直接退出）时，若正处于手动横屏（含「默认横屏」进入），
+  // 先主动切回竖屏再退出，避免退出瞬间因为全屏横屏状态尚未解除、切屏淡出动画里还停留在
+  // 横屏，结束 dispose 时才回落竖屏——表现为「先横屏闪一下再恢复竖屏」的 BUG。
+  // 系统返回键走 PlatformBackHandler 已做过同样的切换，这里让 X 按钮也走同一条路径。
+  val requestClose: () -> Unit = {
+    if (fullscreen) {
+      fullscreen = false
+      fullscreenEntry = if (fullscreenEntry == FullscreenEntry.Manual) {
+        FullscreenEntry.ManualOff
+      } else {
+        FullscreenEntry.None
+      }
+    }
+    appState.back()
+  }
+
   LaunchedEffect(streamer?.roomId) {
     val s = streamer ?: return@LaunchedEffect
     videoAspectRatio = null
@@ -529,7 +545,7 @@ fun PlayerScreen(
         if (!fullscreen && !verticalFullBleed) {
           PlayerHeader(
             streamer = streamer,
-            onBack = appState::back,
+            onBack = requestClose,
             followed = streamer?.let(appState::isFollowed) == true,
             onToggleFollow = { s -> appState.toggleFollow(s) },
             modifier = Modifier.fillMaxWidth(),
@@ -655,7 +671,7 @@ fun PlayerScreen(
             if (verticalFullBleed) {
               PlayerHeader(
                 streamer = streamer,
-                onBack = appState::back,
+                onBack = requestClose,
                 followed = streamer?.let(appState::isFollowed) == true,
                 onToggleFollow = { s -> appState.toggleFollow(s) },
                 modifier = Modifier
