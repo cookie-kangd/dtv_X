@@ -754,6 +754,27 @@ private fun BasicSettingsSection(
       }
     }
 
+    // 退出时清理缓存（默认开启）
+    SettingsCard {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+          Text("退出时清理缓存", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+          Text(
+            text = "开启后每次退出 App 自动清理直播缓存、临时文件等垃圾数据；登录状态（如 B站）与设置、关注列表均保留。默认开启。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+          )
+        }
+        Switch(
+          checked = appState.exitCleanupEnabled,
+          onCheckedChange = appState::updateExitCleanupEnabled,
+        )
+      }
+    }
+
     // 播放画质（默认最高）
     SettingsCard {
       Text("播放画质", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))

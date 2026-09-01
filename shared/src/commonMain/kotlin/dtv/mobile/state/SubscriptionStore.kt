@@ -53,6 +53,11 @@ interface SubscriptionStore {
   fun loadLandscapeEnabled(): Boolean
   fun saveLandscapeEnabled(value: Boolean)
 
+  // 退出清理：默认开启。开启后每次退出 App 清理缓存与临时文件，
+  // 但不会影响登录态（如 B站 Cookie）、设置、关注列表等持久数据。
+  fun loadExitCleanupEnabled(): Boolean
+  fun saveExitCleanupEnabled(value: Boolean)
+
   // 平台设置：底部切换栏显示哪些平台，以及它们的排列顺序。
   // 两者都按"平台枚举名"持久化，避免 Platform 枚举顺序变动导致的历史数据错位。
   fun loadPlatformOrder(): List<String>
@@ -77,6 +82,7 @@ object InMemorySubscriptionStore : SubscriptionStore {
   private var compactCardEnabled: Boolean = true
   private var videoQuality: String = VideoQuality.Highest.name
   private var landscapeEnabled: Boolean = false
+  private var exitCleanupEnabled: Boolean = true
   private var platformOrder: List<String> = emptyList()
   private var platformDisabled: List<String> = emptyList()
 
@@ -162,6 +168,12 @@ object InMemorySubscriptionStore : SubscriptionStore {
 
   override fun saveLandscapeEnabled(value: Boolean) {
     landscapeEnabled = value
+  }
+
+  override fun loadExitCleanupEnabled(): Boolean = exitCleanupEnabled
+
+  override fun saveExitCleanupEnabled(value: Boolean) {
+    exitCleanupEnabled = value
   }
 
   override fun loadPlatformOrder(): List<String> = platformOrder

@@ -36,6 +36,7 @@ class AppState(
   var compactCardEnabled: Boolean by mutableStateOf(true)
   var videoQuality: VideoQuality by mutableStateOf(VideoQuality.Highest)
   var landscapeEnabled: Boolean by mutableStateOf(false)
+  var exitCleanupEnabled: Boolean by mutableStateOf(true)
   var accentColorHex: String by mutableStateOf("")
   var platformSwitchLoading: Boolean by mutableStateOf(false)
   var selectedPlatform: Platform by mutableStateOf(Platform.Douyu)
@@ -77,6 +78,7 @@ class AppState(
     compactCardEnabled = subscriptionStore.loadCompactCardEnabled()
     videoQuality = VideoQuality.fromNameOrHighest(subscriptionStore.loadVideoQuality())
     landscapeEnabled = subscriptionStore.loadLandscapeEnabled()
+    exitCleanupEnabled = subscriptionStore.loadExitCleanupEnabled()
     accentColorHex = subscriptionStore.loadAccentColorHex()
     platformOrder = loadPlatformOrder()
     platformDisabled = loadPlatformDisabled()
@@ -184,6 +186,11 @@ class AppState(
   fun updateLandscapeEnabled(enabled: Boolean) {
     landscapeEnabled = enabled
     subscriptionStore.saveLandscapeEnabled(enabled)
+  }
+
+  fun updateExitCleanupEnabled(enabled: Boolean) {
+    exitCleanupEnabled = enabled
+    subscriptionStore.saveExitCleanupEnabled(enabled)
   }
 
   private fun loadPlatformOrder(): List<Platform> {

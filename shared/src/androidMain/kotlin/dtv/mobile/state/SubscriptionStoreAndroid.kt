@@ -132,6 +132,12 @@ class SubscriptionStoreAndroid(
     prefs.edit().putBoolean("landscape_enabled", value).apply()
   }
 
+  override fun loadExitCleanupEnabled(): Boolean = prefs.getBoolean("exit_cleanup_enabled", true)
+
+  override fun saveExitCleanupEnabled(value: Boolean) {
+    prefs.edit().putBoolean("exit_cleanup_enabled", value).apply()
+  }
+
   // 平台排列顺序（按枚举名保存）。为空表示尚未自定义，由 AppState 回落到默认顺序。
   override fun loadPlatformOrder(): List<String> {
     val raw = prefs.getString("platform_order", null)?.takeIf { it.isNotBlank() } ?: return emptyList()

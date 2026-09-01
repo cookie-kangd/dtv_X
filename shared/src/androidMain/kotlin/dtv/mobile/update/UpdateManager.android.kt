@@ -36,10 +36,10 @@ import java.util.concurrent.TimeUnit
 
 /** 检查更新所指向的仓库（发布 Release 的地方） */
 private const val UPDATE_REPO_OWNER = "cookie-kangd"
-private const val UPDATE_REPO_NAME = "dtv_X"
+private const val UPDATE_REPO_NAME = "dtv_mx"
 
 /** 下载到系统 Download 目录的安装包文件名前缀 / 后缀（应用内更新按此命名匹配） */
-private const val APK_PREFIX = "dtv-X-"
+private const val APK_PREFIX = "dtv-mx-"
 private const val APK_SUFFIX = ".apk"
 
 @Serializable

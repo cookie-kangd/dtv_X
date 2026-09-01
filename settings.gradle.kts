@@ -28,7 +28,7 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "DTV-mobile"
+rootProject.name = "dtv_mx"
 
 include(":shared")
 include(":androidApp")

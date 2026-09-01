@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # 应用版本号（需与 androidApp/build.gradle.kts 的 versionName 保持一致）
-      APP_VERSION: "0.1.8"
+      APP_VERSION: "0.1.9"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -75,7 +75,7 @@ jobs:
             exit 1
           fi
           # 发布产物统一命名为 dtv-X-<版本号>.apk（应用内更新会按 .apk 资源匹配）
-          ASSET_NAME="dtv-X-${APP_VERSION}.apk"
+          ASSET_NAME="dtv-mx-${APP_VERSION}.apk"
           mkdir -p out
           cp "$APK" "out/$ASSET_NAME"
           echo "apk_path=out/$ASSET_NAME" >> "$GITHUB_OUTPUT"
@@ -84,7 +84,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: dtv-X-apk
+          name: dtv-mx-apk
           path: out/*.apk
           if-no-files-found: error
 
@@ -120,5 +120,5 @@ jobs:
           gh release create "$TAG" \
             "${{ steps.apk.outputs.apk_path }}" \
             --target "${{ github.sha }}" \
-            --title "DTV X v${VERSION}" \
+            --title "dtv_mx v${VERSION}" \
             --notes-file release_body.md

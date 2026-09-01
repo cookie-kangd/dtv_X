@@ -1,16 +1,20 @@
-<p align="center"><img src="screenshots/icon.png" width="96" height="96" alt="dtv_X" /></p>
+<p align="center"><img src="screenshots/icon.png" width="96" height="96" alt="dtv_mx" /></p>
 
-<h3 align="center">dtv_X</h3>
-
-<p align="center">
-  轻量化直播app，抖音、b站、斗鱼、虎牙平台，专注看直播(非官方)
-</p>
+<h3 align="center">dtv_mx</h3>
 
 <p align="center">
-  此仓库用于自己对dtv_mobile的修改，初衷让自己更适用，觉得好用的可以star一下哈
+  轻量化安卓直播聚合 App：抖音、B站、斗鱼、虎牙 四大平台直播一站式观看（开源 / 非官方）
 </p>
+
+> 本仓库基于 dtv_mobile 的修改版本，初衷是让自己用得更顺手。若觉得好用，打赏请去上游作者仓库，感谢作者的开源。
 
 ---
+
+## 简介
+
+**dtv_mx** 是一款面向 Android 的轻量化**直播聚合**应用，基于 Kotlin Multiplatform + Jetpack Compose 构建，使用 Android Media3（ExoPlayer）播放。它把**斗鱼、虎牙、抖音、B站（哔哩哔哩）**的直播间聚合到同一个 App 里，无需在多个平台 App 之间来回切换。
+
+**中文关键词**：安卓直播软件、直播聚合、斗鱼直播、虎牙直播、抖音直播、B站直播、哔哩哔哩直播、开源直播 app、手机看直播、横屏看直播、弹幕、B站登录看直播、Kotlin Multiplatform 直播。
 
 ## 功能
 
@@ -20,6 +24,7 @@
 - 搜索：按平台搜索主播/直播间；B站支持登录/退出
 - 播放：基于 Android Media3（ExoPlayer）播放；全屏/横竖屏适配；画质档位（最高/高/中/低）；线路选择
 - 弹幕：实时弹幕展示；关键词屏蔽；字号/透明度/显示区域可调
+- 退出清理：每次退出 App 自动清理直播缓存、临时文件等垃圾数据，登录状态与设置均保留
 - 数据同步：局域网共享 / 导入关注、分区订阅与屏蔽词
 - 主题：浅色 / 深色 / 跟随系统
 - 检查更新：设置内一键查询仓库 Release 并下载安装

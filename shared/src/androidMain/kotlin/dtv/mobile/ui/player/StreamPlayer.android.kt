@@ -47,6 +47,17 @@ private object PlayerCacheHolder {
     cache = created
     return created
   }
+
+  @Synchronized
+  fun release() {
+    cache?.let { runCatching { it.release() } }
+    cache = null
+  }
+}
+
+/** 释放播放器磁盘缓存（退出清理前调用，避免在缓存仍被持有时直接删目录导致索引损坏）。 */
+fun releaseDtvMediaCache() {
+  PlayerCacheHolder.release()
 }
 
 /**
