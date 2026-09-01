@@ -9,7 +9,7 @@
 ### 优化
 - 播放器右侧控制按钮尺寸调整（40dp，图标 24dp），点击区域更舒适
 - 升级基础依赖以换取稳定性与性能收益：
-  - `kotlinx-coroutines` 1.8.1 → 1.9.2
+  - `kotlinx-coroutines` 1.8.1 → 1.9.0
   - `kotlinx-serialization-json` 1.7.3 → 1.8.1
   - `androidx.core:core-ktx` 1.13.1 → 1.15.0
   - `androidx.activity:activity-compose` 1.9.2 → 1.10.1

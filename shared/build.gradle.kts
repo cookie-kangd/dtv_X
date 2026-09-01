@@ -19,7 +19,7 @@ kotlin {
         implementation(compose.materialIconsExtended)
         implementation(compose.ui)
 
-        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.2")
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
         implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
 
         val ktorVersion = "2.3.12"
