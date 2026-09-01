@@ -1,0 +1,31 @@
+# 统一仓库内文本文件的换行为 LF，避免 Windows 工作区的 CRLF 混入仓库
+# （CRLF 会让 CI 里按行精确匹配的脚本失效，例如 CHANGELOG 小节抽取）
+* text=auto eol=lf
+
+# 明确指定常见文本类型
+*.kt      text eol=lf
+*.kts     text eol=lf
+*.java    text eol=lf
+*.xml     text eol=lf
+*.md      text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.pro     text eol=lf
+*.properties text eol=lf
+*.json    text eol=lf
+*.py      text eol=lf
+gradlew   text eol=lf
+
+# Windows 批处理必须保留 CRLF
+*.bat     text eol=crlf
+
+# 二进制资源不做换行转换
+*.png     binary
+*.jpg     binary
+*.jpeg    binary
+*.webp    binary
+*.apk     binary
+*.jar     binary
+*.keystore binary
+*.ttf     binary
+*.otf     binary
