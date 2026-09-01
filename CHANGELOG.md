@@ -3,7 +3,8 @@
 ## v0.1.11
 
 ### 优化
-- 升级播放器底层依赖 `androidx.media3`(ExoPlayer) 1.6.1 → **1.11.0**：获取 ExoPlayer 在缓冲调度、解码器适配与播放稳定性方面的多年累积修复，提升直播播放性能与稳定性；该库为纯 AndroidX 组件、不依赖 Kotlin 版本，故**不改动 Kotlin / Compose / AGP / Gradle 工具链**，以稳定优先
+- 升级播放器底层依赖 `androidx.media3`(ExoPlayer) 1.6.1 → **1.10.0**：获取 ExoPlayer 在缓冲调度、解码器适配与播放稳定性方面的累积修复，提升直播播放性能与稳定性
+  - 说明：media3 ≥ 1.11.0 会强制要求 Kotlin 2.2 工具链（传递 `kotlin-stdlib` 2.2.x，与本项目锁定的 Kotlin 2.0.21 不兼容、编译直接失败），故在「不改动 Kotlin / Compose / AGP / Gradle 工具链、以稳定优先」的前提下，升到仍兼容 2.0.21 的最高版本 **1.10.0**（`kotlin-stdlib` 锁定 2.0.20）
 - 其余依赖与工具链保持不变
 
 ## v0.1.10
