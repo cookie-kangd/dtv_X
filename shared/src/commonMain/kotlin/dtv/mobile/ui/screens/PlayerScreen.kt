@@ -79,6 +79,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
@@ -1082,27 +1083,46 @@ private fun PlayerSideControlsOverlay(
   onPip: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
-  Column(
+  // 根据视频区可用高度自适应缩放整列按钮：竖屏视频区矮时整体缩小，保证 5 个按钮全部可见；
+  // 横屏视频区高时保持原尺寸。相比「按横竖屏写死两套尺寸」更鲁棒，对小屏 / 异形比例同样适用。
+  BoxWithConstraints(
     modifier = modifier,
-    verticalArrangement = Arrangement.spacedBy(14.dp),
-    horizontalAlignment = Alignment.CenterHorizontally,
+    contentAlignment = Alignment.CenterEnd,
   ) {
-    ControlFab(icon = Icons.Default.Settings, onClick = onOpenSettings)
-    ControlFab(icon = Icons.Default.Refresh, onClick = onReload)
-    if (showFullscreen) {
-      ControlFab(icon = Icons.Default.FullscreenExit.takeIf { fullscreen } ?: Icons.Default.Fullscreen, onClick = onToggleFullscreen)
+    val gap = 14.dp
+    val baseSize = 40.dp
+    val baseIcon = 24.dp
+    val count = 3 +
+      (if (showFullscreen) 1 else 0) +
+      (if (pipSupported) 1 else 0)
+    val needed = baseSize * count + gap * (count - 1)
+    val scale = if (maxHeight < needed) (maxHeight / needed).coerceIn(0.5f, 1f) else 1f
+    val size = baseSize * scale
+    val iconSize = baseIcon * scale
+    val spacing = gap * scale
+    Column(
+      verticalArrangement = Arrangement.spacedBy(spacing),
+      horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+      ControlFab(icon = Icons.Default.Settings, onClick = onOpenSettings, size = size, iconSize = iconSize)
+      ControlFab(icon = Icons.Default.Refresh, onClick = onReload, size = size, iconSize = iconSize)
+      if (showFullscreen) {
+        ControlFab(icon = Icons.Default.FullscreenExit.takeIf { fullscreen } ?: Icons.Default.Fullscreen, onClick = onToggleFullscreen, size = size, iconSize = iconSize)
+      }
+      // 画中画：仅在倒数第二个位置（耳机按钮之上）显示，点击进入系统画中画。
+      if (pipSupported) {
+        ControlFab(icon = pipIcon(), onClick = onPip, size = size, iconSize = iconSize)
+      }
+      // 熄屏听播：未开启时显示耳机，开启后显示"关闭耳机"图标，再次点击即关闭
+      val listenOnlyIcon = remember(listenOnly) { listenOnlyIcon(off = listenOnly) }
+      ControlFab(
+        icon = listenOnlyIcon,
+        onClick = onToggleListenOnly,
+        active = listenOnly,
+        size = size,
+        iconSize = iconSize,
+      )
     }
-    // 画中画：仅在倒数第二个位置（耳机按钮之上）显示，点击进入系统画中画。
-    if (pipSupported) {
-      ControlFab(icon = pipIcon(), onClick = onPip)
-    }
-    // 熄屏听播：未开启时显示耳机，开启后显示"关闭耳机"图标，再次点击即关闭
-    val listenOnlyIcon = remember(listenOnly) { listenOnlyIcon(off = listenOnly) }
-    ControlFab(
-      icon = listenOnlyIcon,
-      onClick = onToggleListenOnly,
-      active = listenOnly,
-    )
   }
 }
 
@@ -1176,10 +1196,12 @@ private fun ControlFab(
   onClick: () -> Unit,
   modifier: Modifier = Modifier,
   active: Boolean = false,
+  size: Dp = 40.dp,
+  iconSize: Dp = 24.dp,
 ) {
   val activeTint = MaterialTheme.colorScheme.primary
   Surface(
-    modifier = modifier.size(40.dp).clip(CircleShape).clickable(onClick = onClick),
+    modifier = modifier.size(size).clip(CircleShape).clickable(onClick = onClick),
     shape = CircleShape,
     color = if (active) activeTint.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.10f),
     border = BorderStroke(
@@ -1191,7 +1213,7 @@ private fun ControlFab(
   ) {
     Box(contentAlignment = Alignment.Center) {
       Icon(
-        modifier = Modifier.size(24.dp),
+        modifier = Modifier.size(iconSize),
         imageVector = icon,
         contentDescription = null,
         tint = if (active) activeTint else Color.White.copy(alpha = 0.92f),
