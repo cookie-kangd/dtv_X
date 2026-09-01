@@ -32,6 +32,7 @@
 - 系统要求：**Android 8.0（API 26）及以上**，支持 `arm64-v8a` / `armeabi-v7a`
 - App 内可直接检查更新：**设置 → 检查更新**，会读取本仓库 Release 并下载安装
 - 所有版本均由 GitHub Actions 自动构建、使用同一签名证书，可直接覆盖安装（OTA 升级不会提示签名冲突）
+- 官方网站 / 文档站点：<https://cookie-kangd.github.io/dtv_mx/>（独立可索引页面，含功能介绍、截图与下载入口，便于搜索引擎收录）
 
 ## 功能
 
@@ -98,4 +99,4 @@ cd dtv_mx
 
 ## 关键词
 
-安卓直播软件、手机直播聚合 App、抖音直播、B站直播、哔哩哔哩直播、斗鱼直播、虎牙直播、直播弹幕、横屏看直播、开源直播播放器、无广告直播 App、多平台直播合一、直播源聚合、Android live streaming aggregator, douyin / bilibili / douyu / huya live app, Kotlin Multiplatform, Jetpack Compose, ExoPlayer, open source Android live TV player.
+安卓直播软件、手机直播聚合 App、抖音直播、B站直播、哔哩哔哩直播、斗鱼直播、虎牙直播、直播弹幕、横屏看直播、开源直播播放器、无广告直播 App、多平台直播合一、直播源聚合、dtv_mx 官网、dtv_mx 下载、Android live streaming aggregator, douyin / bilibili / douyu / huya live app, Kotlin Multiplatform, Jetpack Compose, ExoPlayer, open source Android live TV player.
