@@ -39,12 +39,12 @@ actual object PictureInPicture {
   private val _isInPip: MutableState<Boolean> = mutableStateOf(false)
 
   /** 由 MainActivity.onCreate 调用，记录当前 Activity（弱引用）。 */
-  internal fun bind(activity: Activity) {
+  fun bind(activity: Activity) {
     ActivityHolder.set(activity)
   }
 
   /** 由 MainActivity.onPictureInPictureModeChanged 回调，更新画中画状态。 */
-  internal fun setInPip(value: Boolean) {
+  fun setInPip(value: Boolean) {
     _isInPip.value = value
   }
 
