@@ -49,7 +49,7 @@ kotlin {
         implementation("androidx.core:core-ktx:1.15.0")
         implementation("androidx.activity:activity-compose:1.10.1")
 
-        val media3Version = "1.6.1"
+        val media3Version = "1.11.0"
         implementation("androidx.media3:media3-exoplayer:$media3Version")
         implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
         implementation("androidx.media3:media3-datasource:$media3Version")
