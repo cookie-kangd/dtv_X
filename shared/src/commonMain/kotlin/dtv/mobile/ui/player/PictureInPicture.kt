@@ -9,7 +9,7 @@ import androidx.compose.runtime.State
  * - [enter]：以给定宽高比进入系统画中画；返回是否成功发起。
  * - [isInPictureInPictureMode]：当前是否处于画中画，播放器据此隐藏叠加层、只留视频。
  *
- * 在 Android 上委托 [androidx.appcompat.app.PictureInPicture]` 的 Activity 能力；
+ * 在 Android 上通过 [android.app.Activity.enterPictureInPictureMode] 进入系统画中画，由 MainActivity 绑定 Activity 弱引用并在 onPictureInPictureModeChanged 中更新状态；
  * 非 Android（iOS 等）平台 [isSupported] 恒为 false，[enter] 直接返回 false。
  */
 expect object PictureInPicture {
