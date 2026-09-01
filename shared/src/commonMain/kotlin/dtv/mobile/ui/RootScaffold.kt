@@ -294,7 +294,7 @@ private fun HubTopBar(
               modifier = Modifier.padding(top = 12.dp),
             )
             Text(
-              text = "搜索直播、主播",
+              text = "搜索",
               color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
               style = MaterialTheme.typography.bodyMedium,
               modifier = Modifier.padding(top = 12.dp),

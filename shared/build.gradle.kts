@@ -19,8 +19,8 @@ kotlin {
         implementation(compose.materialIconsExtended)
         implementation(compose.ui)
 
-        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.2")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
 
         val ktorVersion = "2.3.12"
         implementation("io.ktor:ktor-client-core:$ktorVersion")
@@ -42,14 +42,14 @@ kotlin {
         implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
         implementation("org.mozilla:rhino:1.7.14")
         implementation("com.squareup.okhttp3:okhttp:4.12.0")
-        implementation("io.coil-kt:coil-compose:2.6.0")
+        implementation("io.coil-kt:coil-compose:2.7.0")
         implementation("com.google.zxing:core:3.5.3")
         implementation("com.journeyapps:zxing-android-embedded:4.3.0")
         implementation("app.cash.quickjs:quickjs-android:0.9.2")
         implementation("androidx.core:core-ktx:1.13.1")
         implementation("androidx.activity:activity-compose:1.9.2")
 
-        val media3Version = "1.3.1"
+        val media3Version = "1.6.1"
         implementation("androidx.media3:media3-exoplayer:$media3Version")
         implementation("androidx.media3:media3-exoplayer-hls:$media3Version")
         implementation("androidx.media3:media3-datasource:$media3Version")

@@ -95,6 +95,7 @@ import dtv.mobile.state.AppState
 import dtv.mobile.state.VideoQuality
 import dtv.mobile.theme.DtvColors
 import dtv.mobile.ui.components.NetworkImage
+import dtv.mobile.ui.player.PictureInPicture
 import dtv.mobile.ui.player.StreamPlayer
 import dtv.mobile.ui.system.FullscreenEffect
 import dtv.mobile.ui.system.PlatformBackHandler
@@ -164,6 +165,10 @@ fun PlayerScreen(
   var isClosing by remember { mutableStateOf(false) }
 
   val scope = rememberCoroutineScope()
+
+  // 画中画：仅在支持的设备上显示按钮；进入后隐藏所有叠加层，只保留视频画面。
+  val pipSupported = remember { PictureInPicture.isSupported() }
+  val isInPip by PictureInPicture.isInPictureInPictureMode
 
   DisposableEffect(Unit) {
     onDispose { appState.playerFullscreen = false }
@@ -357,7 +362,7 @@ fun PlayerScreen(
     val isLandscapeLayout = !isPortraitLayout
 
     FullscreenEffect(
-      enabled = fullscreen && !isClosing,
+      enabled = fullscreen && !isClosing && !isInPip,
       lockLandscape = fullscreenEntry == FullscreenEntry.Manual && !isClosing,
       exitToPortrait = fullscreenEntry == FullscreenEntry.ManualOff || isClosing,
     )
@@ -538,7 +543,7 @@ fun PlayerScreen(
       loading
 
     LaunchedEffect(isLandscapeLayout) {
-      if (isClosing) return@LaunchedEffect
+      if (isClosing || isInPip) return@LaunchedEffect
       // Rotating to landscape should behave like fullscreen (hide bottom bar, system bars).
       if (isLandscapeLayout && !fullscreen && fullscreenEntry != FullscreenEntry.ManualOff) {
         fullscreen = true
@@ -557,7 +562,7 @@ fun PlayerScreen(
           .fillMaxSize()
           .then(if (fullscreen) Modifier.background(Color.Black) else Modifier),
       ) {
-        if (!fullscreen && !verticalFullBleed) {
+            if (!fullscreen && !verticalFullBleed && !isInPip) {
           PlayerHeader(
             streamer = streamer,
             onBack = requestClose,
@@ -683,7 +688,7 @@ fun PlayerScreen(
             }
           }
 
-            if (verticalFullBleed) {
+            if (verticalFullBleed && !isInPip) {
               PlayerHeader(
                 streamer = streamer,
                 onBack = requestClose,
@@ -697,7 +702,7 @@ fun PlayerScreen(
             }
 
             val overlayDanmaku = canShowDanmaku && (fullscreen || isVerticalVideo)
-            if (overlayDanmaku) {
+            if (overlayDanmaku && !isInPip) {
               if (fullscreen && isHorizontalVideo) {
                 ScrollingDanmakuOverlay(
                   resetKey = streamer?.roomId,
@@ -725,37 +730,41 @@ fun PlayerScreen(
               }
             }
 
-            PlayerSideControlsOverlay(
-              fullscreen = fullscreen,
-              showFullscreen = isVideoAspectKnown && !isVerticalVideo,
-              onToggleFullscreen = {
-                if (!isClosing) {
-                  if (fullscreen) {
-                    fullscreen = false
-                    fullscreenEntry = if (isLandscapeLayout) FullscreenEntry.ManualOff else FullscreenEntry.None
-                  } else {
-                    fullscreen = true
-                    fullscreenEntry = FullscreenEntry.Manual
+            if (!isInPip) {
+              PlayerSideControlsOverlay(
+                fullscreen = fullscreen,
+                showFullscreen = isVideoAspectKnown && !isVerticalVideo,
+                onToggleFullscreen = {
+                  if (!isClosing) {
+                    if (fullscreen) {
+                      fullscreen = false
+                      fullscreenEntry = if (isLandscapeLayout) FullscreenEntry.ManualOff else FullscreenEntry.None
+                    } else {
+                      fullscreen = true
+                      fullscreenEntry = FullscreenEntry.Manual
+                    }
                   }
-                }
-              },
-              onOpenSettings = { showSettings = true },
-              onReload = { reloadUrl() },
-              listenOnly = listenOnly,
-              onToggleListenOnly = {
-                val next = !listenOnly
-                // 开启时顺带申请通知权限，让常驻通知可见（未授权也不影响听播）
-                if (next) requestNotificationPermission()
-                listenOnly = next
-              },
-              modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 16.dp),
-            )
+                },
+                onOpenSettings = { showSettings = true },
+                onReload = { reloadUrl() },
+                listenOnly = listenOnly,
+                onToggleListenOnly = {
+                  val next = !listenOnly
+                  // 开启时顺带申请通知权限，让常驻通知可见（未授权也不影响听播）
+                  if (next) requestNotificationPermission()
+                  listenOnly = next
+                },
+                pipSupported = pipSupported,
+                onPip = { PictureInPicture.enter(videoAspectRatio?.takeIf { it > 0f } ?: (16f / 9f)) },
+                modifier = Modifier
+                  .align(Alignment.CenterEnd)
+                  .padding(end = 16.dp),
+              )
+            }
           }
         }
 
-        if (!fullscreen && !verticalFullBleed) {
+        if (!fullscreen && !verticalFullBleed && !isInPip) {
           if (canShowDanmaku && isHorizontalVideo) {
             HubDanmakuPanel(
               messages = danmakuMessages,
@@ -1069,6 +1078,8 @@ private fun PlayerSideControlsOverlay(
   onReload: () -> Unit,
   listenOnly: Boolean,
   onToggleListenOnly: () -> Unit,
+  pipSupported: Boolean,
+  onPip: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   Column(
@@ -1080,6 +1091,10 @@ private fun PlayerSideControlsOverlay(
     ControlFab(icon = Icons.Default.Refresh, onClick = onReload)
     if (showFullscreen) {
       ControlFab(icon = Icons.Default.FullscreenExit.takeIf { fullscreen } ?: Icons.Default.Fullscreen, onClick = onToggleFullscreen)
+    }
+    // 画中画：仅在倒数第二个位置（耳机按钮之上）显示，点击进入系统画中画。
+    if (pipSupported) {
+      ControlFab(icon = pipIcon(), onClick = onPip)
     }
     // 熄屏听播：未开启时显示耳机，开启后显示"关闭耳机"图标，再次点击即关闭
     val listenOnlyIcon = remember(listenOnly) { listenOnlyIcon(off = listenOnly) }
@@ -1164,7 +1179,7 @@ private fun ControlFab(
 ) {
   val activeTint = MaterialTheme.colorScheme.primary
   Surface(
-    modifier = modifier.size(38.dp).clip(CircleShape).clickable(onClick = onClick),
+    modifier = modifier.size(40.dp).clip(CircleShape).clickable(onClick = onClick),
     shape = CircleShape,
     color = if (active) activeTint.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.10f),
     border = BorderStroke(
@@ -1176,7 +1191,7 @@ private fun ControlFab(
   ) {
     Box(contentAlignment = Alignment.Center) {
       Icon(
-        modifier = Modifier.size(25.dp),
+        modifier = Modifier.size(24.dp),
         imageVector = icon,
         contentDescription = null,
         tint = if (active) activeTint else Color.White.copy(alpha = 0.92f),
@@ -1184,6 +1199,45 @@ private fun ControlFab(
     }
   }
 }
+
+/**
+ * 自绘「画中画」图标：外框矩形 + 右上角小窗口矩形，语义清晰且不依赖图标集版本。
+ */
+private fun pipIcon(): ImageVector = ImageVector.Builder(
+  name = "PictureInPicture",
+  defaultWidth = 24.dp,
+  defaultHeight = 24.dp,
+  viewportWidth = 24f,
+  viewportHeight = 24f,
+).apply {
+  val ink = SolidColor(Color.White)
+  // 外框（屏幕）
+  addPath(
+    pathData = listOf(
+      PathNode.MoveTo(3f, 5f),
+      PathNode.LineTo(21f, 5f),
+      PathNode.LineTo(21f, 19f),
+      PathNode.LineTo(3f, 19f),
+      PathNode.Close,
+    ),
+    fill = null,
+    stroke = ink,
+    strokeLineWidth = 2f,
+    strokeLineCap = StrokeCap.Round,
+    strokeLineJoin = StrokeJoin.Round,
+  )
+  // 右上角小窗口（画中画窗口）
+  addPath(
+    pathData = listOf(
+      PathNode.MoveTo(13f, 11f),
+      PathNode.LineTo(19f, 11f),
+      PathNode.LineTo(19f, 17f),
+      PathNode.LineTo(13f, 17f),
+      PathNode.Close,
+    ),
+    fill = ink,
+  )
+}.build()
 
 @Composable
 private fun PlayerSettingsDrawer(

@@ -1,5 +1,22 @@
 # dtv_mx 更新日志
 
+## v0.1.10
+
+### 新增功能
+- 播放器新增「画中画」按钮（位于右侧控制栏倒数第二，耳机按钮之上）：点击后进入 Android 系统级画中画小窗，可边看直播边做别的事；进入小窗后自动隐藏所有控件与弹幕叠加层，只显示视频画面
+- 平台板块（斗鱼 / 虎牙 / 抖音 / B站）顶部搜索框占位文案统一为「搜索」
+
+### 优化
+- 播放器右侧控制按钮尺寸调整（40dp，图标 24dp），点击区域更舒适
+- 升级基础依赖以换取稳定性与性能收益：
+  - `kotlinx-coroutines` 1.8.1 → 1.9.2
+  - `kotlinx-serialization-json` 1.7.3 → 1.8.1
+  - `androidx.core:core-ktx` 1.13.1 → 1.15.0
+  - `androidx.activity:activity-compose` 1.9.2 → 1.10.1
+  - `androidx.media3`(ExoPlayer) 1.3.1 → 1.6.1（播放器性能与稳定性）
+  - `coil-compose` 2.6.0 → 2.7.0（图片加载）
+  - 其余依赖（ktor / rhino / okhttp / quickjs / zxing 等）保持不动，以稳定为主
+
 ## v0.1.9
 
 ### 新增功能
