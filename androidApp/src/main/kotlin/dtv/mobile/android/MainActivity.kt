@@ -7,11 +7,11 @@ import android.content.IntentFilter
 import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.core.view.WindowCompat
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.remember
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+import androidx.core.view.WindowCompat
 import dtv.mobile.App
 import dtv.mobile.repo.android.AndroidDtvRepository
 import dtv.mobile.state.SubscriptionStoreAndroid
@@ -34,6 +34,10 @@ class MainActivity : ComponentActivity() {
             .onFailure { AppLog.e("DTV-PiP", "pip exit cleanup failed", it) }
         }.start()
       }
+      // 关闭前把单例画中画状态复位：Activity 在 PiP 中 finish 不会触发系统的
+      // onPictureInPictureModeChanged(false) 回调，不主动复位会残留 true。
+      // （bind() 在下次 onCreate 时也会兜底复位，这里提前同步保持一致。）
+      PictureInPicture.setInPip(false)
       this@MainActivity.finish()
     }
   }
@@ -44,6 +48,7 @@ class MainActivity : ComponentActivity() {
     AppLog.init(applicationContext)
     WindowCompat.setDecorFitsSystemWindows(window, false)
     // 让画中画控制器能拿到当前 Activity（弱引用，离开即释放，不会泄漏）。
+    // bind 内部同时会复位单例画中画状态（修复重进直播间控件消失）。
     PictureInPicture.bind(this)
     // 接收画中画窗口内「退出」按钮的广播（仅本应用内，不导出，安全）。
     ContextCompat.registerReceiver(

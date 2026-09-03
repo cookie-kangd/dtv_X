@@ -24,8 +24,8 @@ android {
     applicationId = "dtv.mobile"
     minSdk = 26
     targetSdk = 36
-    versionCode = 21
-    versionName = "0.1.14"
+    versionCode = 22
+    versionName = "0.1.15"
 
     // 只打包真机使用的 ARM 架构。抖音签名依赖的 libquickjs.so 原本会打包
     // 4 种 ABI（约 3.05MB），其中 x86 / x86_64 合计 1.73MB 在手机上永远用不到。
@@ -76,9 +76,9 @@ dependencies {
 
   implementation("androidx.activity:activity-compose:1.10.1")
   implementation("androidx.core:core-ktx:1.15.0")
-  implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
+  implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.4")
   // 提供 ProcessLifecycleOwner：用于监听整个 App 进入/退出前台，实现「退出时清理缓存」
-  implementation("androidx.lifecycle:lifecycle-process:2.8.6")
+  implementation("androidx.lifecycle:lifecycle-process:2.9.4")
 
   implementation(compose.material3)
   implementation(compose.ui)
