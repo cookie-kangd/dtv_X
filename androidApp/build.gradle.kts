@@ -75,7 +75,7 @@ dependencies {
   implementation(project(":shared"))
 
   implementation("androidx.activity:activity-compose:1.10.1")
-  implementation("androidx.core:core-ktx:1.17.0")
+  implementation("androidx.core:core-ktx:1.15.0")
   implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
   // 提供 ProcessLifecycleOwner：用于监听整个 App 进入/退出前台，实现「退出时清理缓存」
   implementation("androidx.lifecycle:lifecycle-process:2.8.6")

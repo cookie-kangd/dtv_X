@@ -46,9 +46,9 @@ kotlin {
         implementation("com.google.zxing:core:3.5.4")
         implementation("com.journeyapps:zxing-android-embedded:4.3.0")
         implementation("app.cash.quickjs:quickjs-android:0.9.2")
-        // 1.17.0 是仍锁定 kotlin-stdlib 2.0.21 的最高稳定版（1.19.0 起要求 2.1.20，
-        // 与本项目 Kotlin 2.0.21 工具链不兼容）。升级后图内不再混入旧的 stdlib 1.8.22。
-        implementation("androidx.core:core-ktx:1.17.0")
+        // 受 AGP 8.5.2 限制：core-ktx 1.16.0+ 要求 AGP 8.7+、1.17.0 要求 8.9.1，
+        // 故锁定 1.15.0（项目基线，稳定且与 AGP 8.5.2 兼容）。
+        implementation("androidx.core:core-ktx:1.15.0")
         implementation("androidx.activity:activity-compose:1.10.1")
 
         val media3Version = "1.10.1"
