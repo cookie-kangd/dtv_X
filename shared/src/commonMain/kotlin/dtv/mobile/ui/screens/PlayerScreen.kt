@@ -181,6 +181,34 @@ fun PlayerScreen(
     appState.playerFullscreen = fullscreen
   }
 
+  // 横屏全屏时左上角的「X」：仅退出全屏回到竖屏，不关闭播放器。
+  // 行为等同于手动全屏下系统返回键的第一次返回（离开全屏、转回竖屏、仍停留在播放器内）。
+  val exitFullscreen: () -> Unit = {
+    if (fullscreen && !isClosing) {
+      fullscreen = false
+      fullscreenEntry = if (fullscreenEntry == FullscreenEntry.Manual) {
+        FullscreenEntry.ManualOff
+      } else {
+        FullscreenEntry.None
+      }
+    }
+  }
+
+  // 画中画：进入前隐藏底部切换栏（playerFullscreen=true），使 PiP 画面只含视频，
+  // 与横屏全屏下的画中画一致；退出 PiP 时再恢复原值。
+  val pipPriorFullscreen = remember { mutableStateOf<Boolean?>(null) }
+  val enterPip: () -> Unit = {
+    pipPriorFullscreen.value = appState.playerFullscreen
+    appState.playerFullscreen = true
+    PictureInPicture.enter(videoAspectRatio?.takeIf { it > 0f } ?: (16f / 9f))
+  }
+  LaunchedEffect(isInPip) {
+    if (!isInPip) {
+      pipPriorFullscreen.value?.let { appState.playerFullscreen = it }
+      pipPriorFullscreen.value = null
+    }
+  }
+
   // 关闭直播间（X 按钮 / 直接退出）时，若正处于手动横屏（含「默认横屏」进入），
   // 先主动切回竖屏再退出，避免退出瞬间因为全屏横屏状态尚未解除、切屏淡出动画里还停留在
   // 横屏，结束 dispose 时才回落竖屏——表现为「先横屏闪一下再恢复竖屏」的 BUG。
@@ -572,6 +600,7 @@ fun PlayerScreen(
     val verticalFullBleed = !fullscreen && isVerticalVideo
     val showFullPageLoading = !fullscreen &&
       !verticalFullBleed &&
+      !isInPip &&
       streamer?.isLive == true &&
       url == null &&
       error == null &&
@@ -592,10 +621,12 @@ fun PlayerScreen(
     }
 
     val content: @Composable () -> Unit = {
+      // 横屏全屏或画中画时，视频都铺满容器并以黑色打底，保证 PiP 画面与横屏一致（不带入底部栏等杂色）。
+      val isFullBleedVideo = fullscreen || isInPip
       Column(
         modifier = Modifier
           .fillMaxSize()
-          .then(if (fullscreen) Modifier.background(Color.Black) else Modifier),
+          .then(if (isFullBleedVideo) Modifier.background(Color.Black) else Modifier),
       ) {
             if (!fullscreen && !verticalFullBleed && !isInPip) {
           PlayerHeader(
@@ -622,9 +653,7 @@ fun PlayerScreen(
 
         val videoSurfaceShape = RoundedCornerShape(0.dp)
         val videoSurfaceColor = Color.Black
-        val videoSurfaceModifier = if (fullscreen) {
-          Modifier.fillMaxSize()
-        } else if (verticalFullBleed) {
+        val videoSurfaceModifier = if (isFullBleedVideo || verticalFullBleed) {
           Modifier.fillMaxSize()
         } else {
           Modifier.fillMaxWidth().aspectRatio(layoutAspect)
@@ -723,6 +752,33 @@ fun PlayerScreen(
             }
           }
 
+            // 横屏全屏时左上角「X」：点击退出全屏回到竖屏（不关闭播放器）。
+            if (fullscreen && !isInPip) {
+              Surface(
+                modifier = Modifier
+                  .align(Alignment.TopStart)
+                  .statusBarsPadding()
+                  .padding(start = 12.dp, top = 6.dp)
+                  .size(40.dp)
+                  .clip(CircleShape)
+                  .clickable(onClick = exitFullscreen),
+                shape = CircleShape,
+                color = Color.White.copy(alpha = 0.10f),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
+              ) {
+                Box(contentAlignment = Alignment.Center) {
+                  Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "退出全屏",
+                    tint = Color.White.copy(alpha = 0.92f),
+                    modifier = Modifier.size(22.dp),
+                  )
+                }
+              }
+            }
+
             if (verticalFullBleed && !isInPip) {
               PlayerHeader(
                 streamer = streamer,
@@ -790,7 +846,7 @@ fun PlayerScreen(
                   listenOnly = next
                 },
                 pipSupported = pipSupported,
-                onPip = { PictureInPicture.enter(videoAspectRatio?.takeIf { it > 0f } ?: (16f / 9f)) },
+                onPip = enterPip,
                 modifier = Modifier
                   .align(Alignment.CenterEnd)
                   .padding(end = 16.dp),

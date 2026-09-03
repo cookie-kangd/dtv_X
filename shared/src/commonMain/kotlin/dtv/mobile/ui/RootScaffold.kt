@@ -79,12 +79,16 @@ fun RootScaffold(appState: AppState) {
   val scope = rememberCoroutineScope()
 
   var homeRefreshing by remember { mutableStateOf(false) }
+  // 首页刷新（图标点击 / 首次进入）与「下拉刷新」走完全相同的路径：
+  // 只调用 refreshFollowedStreamerCards()，复用各平台关注列表 API 返回的权威直播状态。
+  // 不再额外调用 refreshFollowedLiveStatus() —— 后者基于房间页 HTML / 单独的在线判断接口，
+  // 对「刚刚下播」的主播会误判为仍在线（例如虎牙房间页残留的 stream 数据块），
+  // 这正是「点击刷新图标刷出已下播却显示在线」的根因。统一后两种刷新结果完全一致。
   val onHomeRefresh: () -> Unit = l@{
     if (homeRefreshing) return@l
     scope.launch {
       homeRefreshing = true
       runCatching { appState.refreshFollowedStreamerCards() }
-      runCatching { appState.refreshFollowedLiveStatus() }
       homeRefreshing = false
     }
   }
@@ -92,7 +96,6 @@ fun RootScaffold(appState: AppState) {
   LaunchedEffect(Unit) {
     if (appState.followedStreamers.isNotEmpty()) {
       runCatching { appState.refreshFollowedStreamerCards() }
-      runCatching { appState.refreshFollowedLiveStatus() }
     }
   }
 
