@@ -103,6 +103,7 @@ import dtv.mobile.ui.system.PlatformBackHandler
 import dtv.mobile.ui.system.rememberNotificationPermissionRequester
 import dtv.mobile.util.normalizeHttpUrl
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
