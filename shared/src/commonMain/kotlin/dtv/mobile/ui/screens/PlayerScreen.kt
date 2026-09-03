@@ -102,9 +102,11 @@ import dtv.mobile.ui.system.FullscreenEffect
 import dtv.mobile.ui.system.PlatformBackHandler
 import dtv.mobile.ui.system.rememberNotificationPermissionRequester
 import dtv.mobile.util.normalizeHttpUrl
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -314,12 +316,43 @@ fun PlayerScreen(
 
     danmakuMessages = emptyList()
     try {
-      flow.collectLatest { msg ->
-        if (blockKeywordsLower.isNotEmpty()) {
-          val contentLower = msg.content.lowercase()
-          if (blockKeywordsLower.any { contentLower.contains(it) }) return@collectLatest
+      // 批量合流：热门房间每秒可达数十条弹幕。逐条改 state 会造成
+      // 「每条两次 O(n) 整表复制 + 整块弹幕面板重组」。先攒批再按节奏一次性并入，
+      // 复制与重组次数大幅下降；单条弹幕最多延迟 flushIntervalMs 上屏。
+      val batchSize = 24
+      val flushIntervalMs = 120L
+      val pending = ArrayList<DanmakuMessage>(batchSize)
+      coroutineScope {
+        // 定时排水：保证最后一批（之后没有新弹幕时）也能上屏，不会滞留缓冲区
+        val drainJob = launch {
+          while (isActive) {
+            delay(flushIntervalMs)
+            if (pending.isNotEmpty()) {
+              danmakuMessages = (danmakuMessages + pending).takeLast(danmakuMax)
+              pending.clear()
+            }
+          }
         }
-        danmakuMessages = (danmakuMessages + msg).takeLast(danmakuMax)
+        try {
+          flow.collect { msg ->
+            if (blockKeywordsLower.isNotEmpty()) {
+              val contentLower = msg.content.lowercase()
+              if (blockKeywordsLower.any { contentLower.contains(it) }) return@collect
+            }
+            pending.add(msg)
+            // 突发弹幕攒够一批立即合并，避免缓冲区无限增长
+            if (pending.size >= batchSize) {
+              danmakuMessages = (danmakuMessages + pending).takeLast(danmakuMax)
+              pending.clear()
+            }
+          }
+        } finally {
+          drainJob.cancel()
+          if (pending.isNotEmpty()) {
+            danmakuMessages = (danmakuMessages + pending).takeLast(danmakuMax)
+            pending.clear()
+          }
+        }
       }
     } catch (t: Throwable) {
       if (t is CancellationException) throw t

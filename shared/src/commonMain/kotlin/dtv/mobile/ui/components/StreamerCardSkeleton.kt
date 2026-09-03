@@ -63,7 +63,8 @@ fun StreamerCardSkeleton(
       .fillMaxWidth()
       .clip(shape),
     shape = shape,
-    color = if (isDark) Color(0xFF1A1A1A) else MaterialTheme.colorScheme.surface,
+    // 与 Colors.kt 的冷色深色盘对齐（NightBgTertiary = 0xFF1A2230）
+    color = if (isDark) Color(0xFF1A2230) else MaterialTheme.colorScheme.surface,
     tonalElevation = 0.dp,
     shadowElevation = if (isDark) 0.dp else 2.dp,
     border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),

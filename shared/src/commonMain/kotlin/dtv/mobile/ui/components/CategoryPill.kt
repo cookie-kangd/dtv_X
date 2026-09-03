@@ -27,7 +27,8 @@ fun CategoryPill(
   val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
   val selectedBg = MaterialTheme.colorScheme.primary
   val selectedFg = Color.Black
-  val idleBg = if (isDark) Color(0xFF252525) else Color(0xFFE5E7EB)
+  // 与 Colors.kt 的冷色深色盘对齐（NightBgTertiary = 0xFF1A2230）
+  val idleBg = if (isDark) Color(0xFF1A2230) else Color(0xFFE5E7EB)
   val idleFg = if (isDark) Color(0xFF9CA3AF) else Color(0xFF6B7280)
 
   Surface(

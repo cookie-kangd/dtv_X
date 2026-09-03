@@ -47,7 +47,8 @@ fun HomeStreamerCard(
   val metrics = LocalCardMetrics.current
   val compact = metrics.compact
   val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-  val bg = if (isDark) Color(0xFF121212) else MaterialTheme.colorScheme.surface
+  // 与 Colors.kt 的冷色深色盘对齐（NightBgSecondary = 0xFF121720），避免卡片发灰而背景发蓝
+  val bg = if (isDark) Color(0xFF121720) else MaterialTheme.colorScheme.surface
   val border = if (isDark) Color.White.copy(alpha = 0.10f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)
   val accent = MaterialTheme.colorScheme.primary
   val cover = normalizeHttpUrl(streamer.coverUrl) ?: normalizeHttpUrl(streamer.avatarUrl)

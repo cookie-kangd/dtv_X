@@ -48,7 +48,8 @@ fun PlatformBottomBar(
   val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
   val containerColor = MaterialTheme.colorScheme.surface.copy(alpha = if (isDark) 0.92f else 0.98f)
   val activeBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-  val inactiveIcon = if (isDark) Color(0xFF6B7280) else Color(0xFF9CA3AF)
+  // 深色底用亮灰、浅色底用深灰，保证两种模式下的对比度（此前两个值写反了）
+  val inactiveIcon = if (isDark) Color(0xFF9CA3AF) else Color(0xFF6B7280)
   val barShape = RoundedCornerShape(0.dp)
 
   Surface(

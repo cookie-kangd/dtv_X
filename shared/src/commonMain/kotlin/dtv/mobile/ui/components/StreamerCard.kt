@@ -73,7 +73,8 @@ fun StreamerCard(
   val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
   val liveBorder = highlightLiveBorder && streamer.isLive
 
-  val cardColor = if (isDark) Color(0xFF1A1A1A) else MaterialTheme.colorScheme.surface
+  // 与 Colors.kt 的冷色深色盘对齐（NightBgTertiary = 0xFF1A2230）
+  val cardColor = if (isDark) Color(0xFF1A2230) else MaterialTheme.colorScheme.surface
   val borderColor = when {
     liveBorder -> MaterialTheme.colorScheme.primary
     isDark -> Color.White.copy(alpha = 0.10f)
@@ -217,7 +218,8 @@ private fun StreamerSearchCard(
   val offlineOverlay = Color(0xFF9CA3AF).copy(alpha = 0.35f)
   val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
 
-  val cardColor = if (isDark) Color(0xFF1A1A1A) else MaterialTheme.colorScheme.surface
+  // 与 Colors.kt 的冷色深色盘对齐（NightBgTertiary = 0xFF1A2230）
+  val cardColor = if (isDark) Color(0xFF1A2230) else MaterialTheme.colorScheme.surface
   val borderColor = if (isDark) Color.White.copy(alpha = 0.10f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)
 
   Surface(

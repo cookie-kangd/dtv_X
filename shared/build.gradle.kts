@@ -43,10 +43,12 @@ kotlin {
         implementation("org.mozilla:rhino:1.7.14")
         implementation("com.squareup.okhttp3:okhttp:4.12.0")
         implementation("io.coil-kt:coil-compose:2.7.0")
-        implementation("com.google.zxing:core:3.5.3")
+        implementation("com.google.zxing:core:3.5.4")
         implementation("com.journeyapps:zxing-android-embedded:4.3.0")
         implementation("app.cash.quickjs:quickjs-android:0.9.2")
-        implementation("androidx.core:core-ktx:1.15.0")
+        // 1.17.0 是仍锁定 kotlin-stdlib 2.0.21 的最高稳定版（1.19.0 起要求 2.1.20，
+        // 与本项目 Kotlin 2.0.21 工具链不兼容）。升级后图内不再混入旧的 stdlib 1.8.22。
+        implementation("androidx.core:core-ktx:1.17.0")
         implementation("androidx.activity:activity-compose:1.10.1")
 
         val media3Version = "1.10.1"
