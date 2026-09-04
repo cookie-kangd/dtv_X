@@ -26,6 +26,11 @@ kotlin {
         implementation("io.ktor:ktor-client-core:$ktorVersion")
         implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
         implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+
+        // 毛玻璃（glassmorphism）效果：底栏浮岛的背景模糊。0.7.3 是兼容 CMP 1.6.x 的最新版。
+        val hazeVersion = "0.7.3"
+        implementation("dev.chrisbanes.haze:haze:$hazeVersion")
+        implementation("dev.chrisbanes.haze:haze-materials:$hazeVersion")
       }
     }
 

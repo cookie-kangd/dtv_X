@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -41,6 +44,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dtv.mobile.state.AppState
+import dtv.mobile.ui.DockContentClearance
 import dtv.mobile.ui.components.LocalCardMetrics
 import dtv.mobile.ui.components.HomeStreamerCard
 import dtv.mobile.ui.components.PullToRefreshBox
@@ -96,7 +100,12 @@ fun HomeScreen(
       modifier = Modifier.fillMaxSize(),
       state = gridState,
       columns = GridCells.Fixed(cardMetrics.columns),
-      contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 92.dp),
+      contentPadding = PaddingValues(
+        start = 18.dp,
+        end = 18.dp,
+        top = 4.dp,
+        bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + DockContentClearance,
+      ),
       horizontalArrangement = Arrangement.spacedBy(if (cardMetrics.compact) 10.dp else 16.dp),
       verticalArrangement = Arrangement.spacedBy(if (cardMetrics.compact) 10.dp else 14.dp),
     ) {

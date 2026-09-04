@@ -67,6 +67,8 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import dtv.mobile.ui.components.BilibiliWebLoginSheet
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.haze
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -180,57 +182,68 @@ fun RootScaffold(appState: AppState) {
         }
       }
     },
-    bottomBar = {
-      if (!(appState.currentScreen == Screen.Player && appState.playerFullscreen)) {
-        PlatformBottomBar(
-          selectedScreen = appState.dockSelectedScreen,
-          selectedPlatform = appState.selectedPlatform,
-          onHomeClick = appState::openHome,
-          onPlatformClick = appState::selectPlatform,
-          switchingLoading = appState.platformSwitchLoading,
-          platforms = appState.visiblePlatforms,
-        )
-      }
-    },
+    bottomBar = {},
   ) { padding ->
-    AnimatedContent(
-      targetState = appState.currentScreen,
-      transitionSpec = {
-        val enteringPlayer = targetState == Screen.Player && initialState != Screen.Player
-        val leavingPlayer = initialState == Screen.Player && targetState != Screen.Player
-        when {
-          enteringPlayer -> (slideInHorizontally(animationSpec = tween(240)) { it / 6 } + fadeIn(animationSpec = tween(240)))
-            .togetherWith(fadeOut(animationSpec = tween(120)))
-          leavingPlayer -> fadeIn(animationSpec = tween(120))
-            .togetherWith(slideOutHorizontally(animationSpec = tween(240)) { it / 6 } + fadeOut(animationSpec = tween(240)))
-          else -> fadeIn(animationSpec = tween(140)).togetherWith(fadeOut(animationSpec = tween(140)))
+    // 悬浮毛玻璃底栏：内容铺满全屏（不再被 bottomBar 槽位顶起），
+    // 底栏浮岛 overlay 在内容之上；列表通过自身 contentPadding 预留浮岛高度，
+    // 保证最后一张卡片能完整滚出浮岛区域。haze 源注册在内容层上，
+    // 使浮岛能对其背后的滚动内容做实时模糊（毛玻璃）。
+    val showDock = !(appState.currentScreen == Screen.Player && appState.playerFullscreen)
+    val hazeState = remember { HazeState() }
+    Box(modifier = Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
+      AnimatedContent(
+        targetState = appState.currentScreen,
+        transitionSpec = {
+          val enteringPlayer = targetState == Screen.Player && initialState != Screen.Player
+          val leavingPlayer = initialState == Screen.Player && targetState != Screen.Player
+          when {
+            enteringPlayer -> (slideInHorizontally(animationSpec = tween(240)) { it / 6 } + fadeIn(animationSpec = tween(240)))
+              .togetherWith(fadeOut(animationSpec = tween(120)))
+            leavingPlayer -> fadeIn(animationSpec = tween(120))
+              .togetherWith(slideOutHorizontally(animationSpec = tween(240)) { it / 6 } + fadeOut(animationSpec = tween(240)))
+            else -> fadeIn(animationSpec = tween(140)).togetherWith(fadeOut(animationSpec = tween(140)))
+          }
+        },
+        label = "screen",
+        modifier = Modifier.fillMaxSize().haze(hazeState),
+      ) { screen ->
+        when (screen) {
+          Screen.Home -> HomeScreen(
+            modifier = Modifier,
+            appState = appState,
+          )
+          Screen.Platform -> PlatformScreen(
+            modifier = Modifier,
+            appState = appState,
+          )
+          Screen.Player -> PlayerScreen(
+            modifier = Modifier,
+            appState = appState,
+            streamer = appState.currentStreamer,
+          )
+          Screen.Search -> SearchScreen(
+            modifier = Modifier,
+            appState = appState,
+          )
+          Screen.Settings -> SettingsScreen(
+            modifier = Modifier,
+            appState = appState,
+          )
         }
-      },
-      label = "screen",
-      modifier = Modifier.fillMaxSize(),
-    ) { screen ->
-      when (screen) {
-        Screen.Home -> HomeScreen(
-          modifier = Modifier.padding(padding),
-          appState = appState,
-        )
-        Screen.Platform -> PlatformScreen(
-          modifier = Modifier.padding(padding),
-          appState = appState,
-        )
-        Screen.Player -> PlayerScreen(
-          modifier = Modifier.padding(padding),
-          appState = appState,
-          streamer = appState.currentStreamer,
-        )
-        Screen.Search -> SearchScreen(
-          modifier = Modifier.padding(padding),
-          appState = appState,
-        )
-        Screen.Settings -> SettingsScreen(
-          modifier = Modifier.padding(padding),
-          appState = appState,
-        )
+      }
+
+      if (showDock) {
+        Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+          PlatformBottomBar(
+            hazeState = hazeState,
+            selectedScreen = appState.dockSelectedScreen,
+            selectedPlatform = appState.selectedPlatform,
+            onHomeClick = appState::openHome,
+            onPlatformClick = appState::selectPlatform,
+            switchingLoading = appState.platformSwitchLoading,
+            platforms = appState.visiblePlatforms,
+          )
+        }
       }
     }
   }

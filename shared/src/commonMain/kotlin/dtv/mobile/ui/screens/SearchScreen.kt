@@ -3,6 +3,9 @@ package dtv.mobile.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -30,6 +33,7 @@ import dtv.mobile.model.Platform
 import dtv.mobile.model.Streamer
 import dtv.mobile.state.AppState
 import dtv.mobile.ui.components.BilibiliWebLoginSheet
+import dtv.mobile.ui.DockContentClearance
 import dtv.mobile.ui.components.StreamerCard
 import dtv.mobile.ui.components.StreamerCardStyle
 import kotlinx.coroutines.delay
@@ -164,7 +168,7 @@ fun SearchScreen(
 
       LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 12.dp),
+        contentPadding = PaddingValues(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + DockContentClearance),
         verticalArrangement = Arrangement.spacedBy(10.dp),
       ) {
         items(results, key = { "${it.platform}-${it.roomId}" }) { s ->

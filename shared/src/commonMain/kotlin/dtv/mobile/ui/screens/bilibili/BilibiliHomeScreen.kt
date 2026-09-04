@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -51,6 +54,7 @@ import dtv.mobile.ui.components.LazyGridLoadMoreEffect
 import dtv.mobile.ui.components.PullToRefreshBox
 import dtv.mobile.ui.components.StreamerCard
 import dtv.mobile.ui.components.StreamerCardSkeleton
+import dtv.mobile.ui.DockContentClearance
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -274,7 +278,10 @@ fun BilibiliHomeScreen(
         modifier = Modifier.fillMaxSize(),
         state = gridState,
         columns = GridCells.Fixed(cardMetrics.columns),
-        contentPadding = PaddingValues(bottom = 0.dp),
+        contentPadding = PaddingValues(
+          bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
+            DockContentClearance,
+        ),
         verticalArrangement = Arrangement.spacedBy(cardMetrics.gridSpacing),
         horizontalArrangement = Arrangement.spacedBy(cardMetrics.gridSpacing),
       ) {
@@ -307,7 +314,11 @@ fun BilibiliHomeScreen(
                   style = MaterialTheme.typography.bodyMedium,
                   color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
                 )
-                else -> Unit
+                else -> Text(
+                  "无更多直播间",
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                )
               }
             }
           }

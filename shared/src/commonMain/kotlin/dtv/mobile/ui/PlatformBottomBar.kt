@@ -8,10 +8,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -19,24 +19,31 @@ import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.hazeChild
 import dtv.mobile.model.Platform
 import dtv.mobile.state.Screen
 
+/** 底栏浮岛在屏幕上占据的净高度（不含导航条），列表 contentPadding 用它预留空间。 */
+val DockContentClearance = 96.dp
+
 @Composable
 fun PlatformBottomBar(
+  hazeState: HazeState,
   selectedScreen: Screen,
   selectedPlatform: Platform,
   onHomeClick: () -> Unit,
@@ -46,27 +53,33 @@ fun PlatformBottomBar(
   platforms: List<Platform> = Platform.entries.filter { it != Platform.Custom },
 ) {
   val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-  val containerColor = MaterialTheme.colorScheme.surface.copy(alpha = if (isDark) 0.92f else 0.98f)
-  val activeBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+  // 毛玻璃 tint：浅色模式用偏白的半透明、深色模式用偏黑的半透明，
+  // blur 由 haze 完成后叠加这层色彩，让浮岛在两种模式下都保持可读性。
+  val glassTint = if (isDark) {
+    Color(0xFF1C1C22).copy(alpha = 0.62f)
+  } else {
+    Color(0xFFF6F7FB).copy(alpha = 0.66f)
+  }
+  val glassStyle = HazeStyle(tint = glassTint, blurRadius = 22.dp, noiseFactor = 0.04f)
+  val dockShape = RoundedCornerShape(percent = 50)
+  val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = if (isDark) 0.28f else 0.22f)
+  val activeBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
   // 深色底用亮灰、浅色底用深灰，保证两种模式下的对比度（此前两个值写反了）
   val inactiveIcon = if (isDark) Color(0xFF9CA3AF) else Color(0xFF6B7280)
-  val barShape = RoundedCornerShape(0.dp)
 
-  Surface(
+  Box(
     modifier = Modifier
       .fillMaxWidth()
-      .clip(barShape),
-    shape = barShape,
-    color = containerColor,
-    tonalElevation = 0.dp,
-    shadowElevation = if (isDark) 0.dp else 18.dp,
-    border = null,
+      .navigationBarsPadding()
+      .padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 10.dp),
   ) {
     Row(
       modifier = Modifier
         .fillMaxWidth()
-        .navigationBarsPadding()
-        .padding(vertical = 3.dp),
+        .shadow(elevation = if (isDark) 6.dp else 14.dp, shape = dockShape, clip = false)
+        .hazeChild(hazeState, shape = dockShape, style = glassStyle)
+        .border(BorderStroke(1.dp, borderColor), dockShape)
+        .padding(vertical = 6.dp),
       horizontalArrangement = Arrangement.SpaceAround,
     ) {
       DockItem(
@@ -123,18 +136,18 @@ private fun RowScope.DockItem(
     modifier = Modifier
       .weight(1f)
       .clickable { onClick() }
-      .defaultMinSize(minHeight = 58.dp)
-      .padding(vertical = 3.dp),
-    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+      .defaultMinSize(minHeight = 54.dp)
+      .padding(vertical = 2.dp),
+    horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.spacedBy(3.dp),
   ) {
-    Surface(
-      shape = RoundedCornerShape(14.dp),
+    androidx.compose.material3.Surface(
+      shape = RoundedCornerShape(percent = 50),
       color = activeBackground.copy(alpha = activeBackground.alpha * bgAlpha),
       tonalElevation = 0.dp,
       shadowElevation = 0.dp,
     ) {
-      Box(modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)) {
+      Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
         Box(modifier = Modifier.graphicsLayer(scaleX = scale, scaleY = scale)) {
           icon()
         }

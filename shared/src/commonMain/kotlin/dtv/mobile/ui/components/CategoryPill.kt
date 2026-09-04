@@ -27,8 +27,9 @@ fun CategoryPill(
   val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
   val selectedBg = MaterialTheme.colorScheme.primary
   val selectedFg = Color.Black
-  // 与 Colors.kt 的冷色深色盘对齐（NightBgTertiary = 0xFF1A2230）
-  val idleBg = if (isDark) Color(0xFF1A2230) else Color(0xFFE5E7EB)
+  // 与 Colors.kt 的冷色深色盘对齐（NightBgTertiary = 0xFF1A2230）；
+  // 半透明以适配悬浮毛玻璃底栏的玻璃质感
+  val idleBg = if (isDark) Color(0xFF1A2230).copy(alpha = 0.72f) else Color(0xFFE5E7EB).copy(alpha = 0.72f)
   val idleFg = if (isDark) Color(0xFF9CA3AF) else Color(0xFF6B7280)
 
   Surface(
