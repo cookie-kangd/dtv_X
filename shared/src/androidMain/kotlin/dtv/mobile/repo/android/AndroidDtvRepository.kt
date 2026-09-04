@@ -47,7 +47,9 @@ import dtv.mobile.util.normalizeHttpUrl
 import io.ktor.client.request.get
 import io.ktor.client.request.headers
 import io.ktor.client.statement.bodyAsText
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -385,100 +387,106 @@ class AndroidDtvRepository(
   }
 
   override suspend fun fetchHuyaCategories(): List<HuyaCate1> {
-    return runCatching {
-      val text = readAssetText("categories/huya_categories.json")
-      val root = json.parseToJsonElement(text)
-      val arr = root as? JsonArray ?: return emptyList()
-      arr.mapNotNull { c1El ->
-        val obj = c1El.jsonObject
-        val name = obj["title"].stringValueOrNull()?.trim().orEmpty()
-        if (name.isBlank()) return@mapNotNull null
-        val href = obj["href"].stringValueOrNull()
-        val sub = obj["subcategories"]?.jsonArray.orEmpty().mapNotNull { c2El ->
-          val c2Obj = c2El.jsonObject
-          val gid = c2Obj["id"].stringValueOrNull()?.trim().orEmpty()
-          val c2Name = c2Obj["title"].stringValueOrNull()?.trim().orEmpty()
-          if (gid.isBlank() || c2Name.isBlank()) return@mapNotNull null
-          HuyaCate2(
-            gid = gid,
-            name = c2Name,
-            href = c2Obj["href"].stringValueOrNull(),
-          )
-        }
-        HuyaCate1(name = name, href = href, cate2List = sub)
-      }.filter { it.cate2List.isNotEmpty() }
-    }.getOrElse { emptyList() }
+    return withContext(Dispatchers.IO) {
+      runCatching {
+        val text = readAssetText("categories/huya_categories.json")
+        val root = json.parseToJsonElement(text)
+        val arr = root as? JsonArray ?: return@runCatching emptyList()
+        arr.mapNotNull { c1El ->
+          val obj = c1El.jsonObject
+          val name = obj["title"].stringValueOrNull()?.trim().orEmpty()
+          if (name.isBlank()) return@mapNotNull null
+          val href = obj["href"].stringValueOrNull()
+          val sub = obj["subcategories"]?.jsonArray.orEmpty().mapNotNull { c2El ->
+            val c2Obj = c2El.jsonObject
+            val gid = c2Obj["id"].stringValueOrNull()?.trim().orEmpty()
+            val c2Name = c2Obj["title"].stringValueOrNull()?.trim().orEmpty()
+            if (gid.isBlank() || c2Name.isBlank()) return@mapNotNull null
+            HuyaCate2(
+              gid = gid,
+              name = c2Name,
+              href = c2Obj["href"].stringValueOrNull(),
+            )
+          }
+          HuyaCate1(name = name, href = href, cate2List = sub)
+        }.filter { it.cate2List.isNotEmpty() }
+      }.getOrElse { emptyList() }
+    }
   }
 
   override suspend fun fetchBilibiliCategories(): List<BilibiliCate1> {
-    return runCatching {
-      val text = readAssetText("categories/bilibili_categories.json")
-      val root = json.parseToJsonElement(text)
-      val arr = root as? JsonArray ?: return emptyList()
+    return withContext(Dispatchers.IO) {
+      runCatching {
+        val text = readAssetText("categories/bilibili_categories.json")
+        val root = json.parseToJsonElement(text)
+        val arr = root as? JsonArray ?: return@runCatching emptyList()
 
-      val list = arr.mapNotNull { c1El ->
-        val obj = c1El.jsonObject
-        val parentId = obj["id"]?.jsonPrimitive?.intOrNull ?: obj["id"].stringValueOrNull()?.toIntOrNull() ?: return@mapNotNull null
-        val name = obj["title"].stringValueOrNull()?.trim().orEmpty()
-        if (name.isBlank()) return@mapNotNull null
-        val href = obj["href"].stringValueOrNull()
-        val sub = obj["subcategories"]?.jsonArray.orEmpty().mapNotNull { c2El ->
-          val c2Obj = c2El.jsonObject
-          val areaId = c2Obj["id"].stringValueOrNull()?.toIntOrNull()
-            ?: c2Obj["id"]?.jsonPrimitive?.intOrNull
-            ?: return@mapNotNull null
-          val c2Name = c2Obj["title"].stringValueOrNull()?.trim().orEmpty()
-          if (c2Name.isBlank()) return@mapNotNull null
-          BilibiliCate2(
-            areaId = areaId,
-            parentAreaId = c2Obj["parent_id"].stringValueOrNull()?.toIntOrNull() ?: parentId,
-            name = c2Name,
-            href = c2Obj["href"].stringValueOrNull(),
-          )
-        }
-        BilibiliCate1(parentAreaId = parentId, name = name, href = href, cate2List = sub)
-      }.filter { it.cate2List.isNotEmpty() }
-      list
-    }.getOrElse { emptyList() }
+        val list = arr.mapNotNull { c1El ->
+          val obj = c1El.jsonObject
+          val parentId = obj["id"]?.jsonPrimitive?.intOrNull ?: obj["id"].stringValueOrNull()?.toIntOrNull() ?: return@mapNotNull null
+          val name = obj["title"].stringValueOrNull()?.trim().orEmpty()
+          if (name.isBlank()) return@mapNotNull null
+          val href = obj["href"].stringValueOrNull()
+          val sub = obj["subcategories"]?.jsonArray.orEmpty().mapNotNull { c2El ->
+            val c2Obj = c2El.jsonObject
+            val areaId = c2Obj["id"].stringValueOrNull()?.toIntOrNull()
+              ?: c2Obj["id"]?.jsonPrimitive?.intOrNull
+              ?: return@mapNotNull null
+            val c2Name = c2Obj["title"].stringValueOrNull()?.trim().orEmpty()
+            if (c2Name.isBlank()) return@mapNotNull null
+            BilibiliCate2(
+              areaId = areaId,
+              parentAreaId = c2Obj["parent_id"].stringValueOrNull()?.toIntOrNull() ?: parentId,
+              name = c2Name,
+              href = c2Obj["href"].stringValueOrNull(),
+            )
+          }
+          BilibiliCate1(parentAreaId = parentId, name = name, href = href, cate2List = sub)
+        }.filter { it.cate2List.isNotEmpty() }
+        list
+      }.getOrElse { emptyList() }
+    }
   }
 
   override suspend fun fetchDouyinCategories(): List<DouyinCate1> {
-    return runCatching {
-      val text = readAssetText("categories/douyin_categories.json")
-      val root = json.parseToJsonElement(text)
-      val arr = root as? JsonArray ?: return emptyList()
+    return withContext(Dispatchers.IO) {
+      runCatching {
+        val text = readAssetText("categories/douyin_categories.json")
+        val root = json.parseToJsonElement(text)
+        val arr = root as? JsonArray ?: return@runCatching emptyList()
 
-      fun parseHrefToPartition(href: String): Pair<String, String>? {
-        val parts = href.split("_")
-        if (parts.size < 2) return null
-        val partition = parts.last().trim()
-        val partitionType = parts[parts.size - 2].trim()
-        if (partition.isEmpty() || partitionType.isEmpty()) return null
-        if (partition.toLongOrNull() == null || partitionType.toLongOrNull() == null) return null
-        return partition to partitionType
-      }
-
-      arr.mapNotNull { c1El ->
-        val obj = c1El.jsonObject
-        val name = obj["title"].stringValueOrNull()?.trim().orEmpty()
-        if (name.isBlank()) return@mapNotNull null
-        val href = obj["href"].stringValueOrNull()
-        val sub = obj["subcategories"]?.jsonArray.orEmpty().mapNotNull { c2El ->
-          val c2Obj = c2El.jsonObject
-          val c2Name = c2Obj["title"].stringValueOrNull()?.trim().orEmpty()
-          val c2Href = c2Obj["href"].stringValueOrNull()?.trim().orEmpty()
-          if (c2Name.isBlank() || c2Href.isBlank()) return@mapNotNull null
-          val parsed = parseHrefToPartition(c2Href) ?: return@mapNotNull null
-          DouyinCate2(
-            partition = parsed.first,
-            partitionType = parsed.second,
-            name = c2Name,
-            href = c2Href,
-          )
+        fun parseHrefToPartition(href: String): Pair<String, String>? {
+          val parts = href.split("_")
+          if (parts.size < 2) return null
+          val partition = parts.last().trim()
+          val partitionType = parts[parts.size - 2].trim()
+          if (partition.isEmpty() || partitionType.isEmpty()) return null
+          if (partition.toLongOrNull() == null || partitionType.toLongOrNull() == null) return null
+          return partition to partitionType
         }
-        DouyinCate1(name = name, href = href, cate2List = sub)
-      }.filter { it.cate2List.isNotEmpty() }
-    }.getOrElse { emptyList() }
+
+        arr.mapNotNull { c1El ->
+          val obj = c1El.jsonObject
+          val name = obj["title"].stringValueOrNull()?.trim().orEmpty()
+          if (name.isBlank()) return@mapNotNull null
+          val href = obj["href"].stringValueOrNull()
+          val sub = obj["subcategories"]?.jsonArray.orEmpty().mapNotNull { c2El ->
+            val c2Obj = c2El.jsonObject
+            val c2Name = c2Obj["title"].stringValueOrNull()?.trim().orEmpty()
+            val c2Href = c2Obj["href"].stringValueOrNull()?.trim().orEmpty()
+            if (c2Name.isBlank() || c2Href.isBlank()) return@mapNotNull null
+            val parsed = parseHrefToPartition(c2Href) ?: return@mapNotNull null
+            DouyinCate2(
+              partition = parsed.first,
+              partitionType = parsed.second,
+              name = c2Name,
+              href = c2Href,
+            )
+          }
+          DouyinCate1(name = name, href = href, cate2List = sub)
+        }.filter { it.cate2List.isNotEmpty() }
+      }.getOrElse { emptyList() }
+    }
   }
 
   override suspend fun fetchDouyuCategories(): DouyuCategories {

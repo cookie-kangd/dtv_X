@@ -2,8 +2,11 @@ package dtv.mobile.ui
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
@@ -57,13 +61,23 @@ fun PlatformBottomBar(
   // 毛玻璃 tint：浅色模式用偏白的半透明、深色模式用偏黑的半透明，
   // blur 由 haze 完成后叠加这层色彩，让浮岛在两种模式下都保持可读性。
   val glassTint = if (isDark) {
-    Color(0xFF1C1C22).copy(alpha = 0.62f)
+    Color(0xFF1C1C22).copy(alpha = 0.58f)
   } else {
-    Color(0xFFF6F7FB).copy(alpha = 0.66f)
+    Color(0xFFF6F7FB).copy(alpha = 0.60f)
   }
-  val glassStyle = HazeStyle(tint = glassTint, blurRadius = 22.dp, noiseFactor = 0.04f)
+  val glassStyle = HazeStyle(tint = glassTint, blurRadius = 24.dp, noiseFactor = 0.06f)
   val dockShape = RoundedCornerShape(percent = 50)
-  val borderColor = MaterialTheme.colorScheme.outline.copy(alpha = if (isDark) 0.28f else 0.22f)
+  // 描边要能明确看出是「一块玻璃」：浅色模式用高亮白边（靠阴影与背景拉开层次），
+  // 深色模式用偏白的亮边勾出玻璃轮廓，比原来的暗色描边明显得多。
+  val borderColor = if (isDark) Color.White.copy(alpha = 0.30f) else Color.White.copy(alpha = 0.90f)
+  // 玻璃高光：自上而下的白色渐变，是玻璃质感的关键（配合描边一起才像毛玻璃）
+  val glassHighlight = Brush.verticalGradient(
+    colors = if (isDark) {
+      listOf(Color.White.copy(alpha = 0.10f), Color.White.copy(alpha = 0.02f), Color.Transparent)
+    } else {
+      listOf(Color.White.copy(alpha = 0.42f), Color.White.copy(alpha = 0.10f), Color.Transparent)
+    },
+  )
   val activeBg = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
   // 深色底用亮灰、浅色底用深灰，保证两种模式下的对比度（此前两个值写反了）
   val inactiveIcon = if (isDark) Color(0xFF9CA3AF) else Color(0xFF6B7280)
@@ -77,9 +91,10 @@ fun PlatformBottomBar(
     Row(
       modifier = Modifier
         .fillMaxWidth()
-        .shadow(elevation = if (isDark) 6.dp else 14.dp, shape = dockShape, clip = false)
+        .shadow(elevation = if (isDark) 10.dp else 16.dp, shape = dockShape, clip = false)
         .hazeChild(hazeState, shape = dockShape, style = glassStyle)
-        .border(BorderStroke(1.dp, borderColor), dockShape)
+        .background(brush = glassHighlight, shape = dockShape)
+        .border(BorderStroke(1.6.dp, borderColor), dockShape)
         .padding(vertical = 6.dp),
       horizontalArrangement = Arrangement.SpaceAround,
     ) {
@@ -132,11 +147,14 @@ private fun RowScope.DockItem(
 ) {
   val scale = animateFloatAsState(targetValue = if (selected) 1.08f else 1.0f, label = "dockScale").value
   val bgAlpha = animateFloatAsState(targetValue = if (selected) 1.0f else 0.0f, label = "dockBgAlpha").value
+  // 去掉默认的矩形水波纹：此前点击/切换栏目时整个格子会闪出一块方形灰底，
+  // 在胶囊浮岛里非常突兀。切换反馈改由选中态的胶囊高亮 + 图标/文字变色表达。
+  val interactionSource = remember { MutableInteractionSource() }
 
   Column(
     modifier = Modifier
       .weight(1f)
-      .clickable { onClick() }
+      .clickable(interactionSource = interactionSource, indication = null) { onClick() }
       .defaultMinSize(minHeight = 54.dp)
       .padding(vertical = 2.dp),
     horizontalAlignment = Alignment.CenterHorizontally,

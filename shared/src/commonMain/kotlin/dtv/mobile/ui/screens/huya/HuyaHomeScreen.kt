@@ -105,7 +105,9 @@ fun HuyaHomeScreen(
         (old + added) to added.size
       }
       rooms = merged
-      hasMore = incoming.isNotEmpty() && addedCount > 0
+      // 该栏目本页就已装满一页才认为后面还有更多；
+      // 不足一页（如斗鱼「语音互动-唱歌」只有 5 个房间）说明已是最后一页。
+      hasMore = incoming.size >= PAGE_SIZE && addedCount > 0
       page += 1
       if (reset && !hadItems) {
         val elapsed = System.currentTimeMillis() - startMs

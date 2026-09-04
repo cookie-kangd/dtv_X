@@ -102,6 +102,7 @@ import dtv.mobile.ui.system.FullscreenEffect
 import dtv.mobile.ui.system.PlatformBackHandler
 import dtv.mobile.ui.system.rememberNotificationPermissionRequester
 import dtv.mobile.util.normalizeHttpUrl
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.CancellationException
@@ -110,7 +111,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.animation.core.Animatable
@@ -151,6 +151,18 @@ fun PlayerScreen(
   var danmakuEnabled by remember(streamer?.roomId) { mutableStateOf(true) }
   var danmakuMessages by remember(streamer?.roomId) { mutableStateOf<List<DanmakuMessage>>(emptyList()) }
   var danmakuMax by remember { mutableIntStateOf(200) }
+  // 弹幕投放序号 / 本批新增条数：滚动弹幕靠 revision 判定「来了新弹幕」。
+  // 不能用 messages.size 当判据——缓冲区满后 takeLast 让 size 恒为 danmakuMax，
+  // size 不再增长会导致横屏滚动弹幕永久停止上新（热门房一两分钟即触发）。
+  var danmakuRevision by remember(streamer?.roomId) { mutableIntStateOf(0) }
+  var danmakuNewCount by remember(streamer?.roomId) { mutableIntStateOf(0) }
+  val mergeDanmakuBatch: (List<DanmakuMessage>) -> Unit = { batch ->
+    if (batch.isNotEmpty()) {
+      danmakuMessages = (danmakuMessages + batch).takeLast(danmakuMax)
+      danmakuNewCount = batch.size.coerceAtMost(danmakuMax)
+      danmakuRevision += 1
+    }
+  }
   // 「熄屏听播」（播放器右侧耳机按钮）：仅作用于当前直播间，退出即自动关闭，不做持久化
   var listenOnly by remember(streamer?.roomId) { mutableStateOf(false) }
   // Android 13+ 需要授权才能在通知栏看到听播常驻通知；未授权不影响播放
@@ -169,6 +181,13 @@ fun PlayerScreen(
   var isClosing by remember { mutableStateOf(false) }
 
   val scope = rememberCoroutineScope()
+  // 当前直播间 roomId 的实时快照。异步解析播放地址返回后要拿它判定结果是否仍属于当前房间：
+  // 切房时旧请求不会被自动取消（reloadUrl 用的是 composable 的 scope 而非 LaunchedEffect），
+  // 若不校验就会把上一个房间的地址写进新房间，表现为「点进去播的是上一个直播间」。
+  val currentRoomId = remember { mutableStateOf<String?>(null) }
+  currentRoomId.value = streamer?.roomId
+  // 画质/线路切换触发的地址解析任务：再次切换或切房时先取消上一个，避免旧结果覆盖新结果
+  var resolveJob by remember { mutableStateOf<Job?>(null) }
 
   // 画中画：仅在支持的设备上显示按钮；进入后隐藏所有叠加层，只保留视频画面。
   val pipSupported = remember { PictureInPicture.isSupported() }
@@ -263,6 +282,9 @@ fun PlayerScreen(
           scope.launch {
             runCatching { appState.repo.fetchDouyuPlayInfo(roomId = s.roomId) }
               .onSuccess { info ->
+                // 异步返回时可能已切到别的直播间：清晰度列表属于上一个房间，必须丢弃，
+                // 否则会把上一房间的档位高亮/线路写到新房间的设置面板上。
+                if (currentRoomId.value != s.roomId) return@onSuccess
                 playInfo = info
                 if (selectedDouyuRate == null) {
                   selectedDouyuRate = matchDouyuRate(info.variants, initialQualityName)
@@ -357,7 +379,7 @@ fun PlayerScreen(
           while (isActive) {
             delay(flushIntervalMs)
             if (pending.isNotEmpty()) {
-              danmakuMessages = (danmakuMessages + pending).takeLast(danmakuMax)
+              mergeDanmakuBatch(pending)
               pending.clear()
             }
           }
@@ -371,16 +393,14 @@ fun PlayerScreen(
             pending.add(msg)
             // 突发弹幕攒够一批立即合并，避免缓冲区无限增长
             if (pending.size >= batchSize) {
-              danmakuMessages = (danmakuMessages + pending).takeLast(danmakuMax)
+              mergeDanmakuBatch(pending)
               pending.clear()
             }
           }
         } finally {
           drainJob.cancel()
-          if (pending.isNotEmpty()) {
-            danmakuMessages = (danmakuMessages + pending).takeLast(danmakuMax)
-            pending.clear()
-          }
+          mergeDanmakuBatch(pending)
+          pending.clear()
         }
       }
     } catch (t: Throwable) {
@@ -391,7 +411,10 @@ fun PlayerScreen(
 
   fun reloadUrl() {
     val s = streamer ?: return
-    scope.launch {
+    val requestedRoomId = s.roomId
+    // 连点切换画质/线路时，取消上一个仍在解析的任务，避免慢的旧结果后到覆盖新的
+    resolveJob?.cancel()
+    resolveJob = scope.launch {
       loading = true
       error = null
       url = null
@@ -410,6 +433,8 @@ fun PlayerScreen(
         Platform.Bilibili -> runCatching { appState.repo.resolveBilibiliStreamUrl(roomId = s.roomId, qn = selectedBilibiliQn) }
         else -> Result.failure(IllegalStateException("暂不支持的平台：${s.platform.title}"))
       }
+      // 解析期间若已切到别的直播间，这份结果作废，交给新房间的解析流程赋值
+      if (currentRoomId.value != requestedRoomId) return@launch
       result
         .onSuccess { url = it }
         .onFailure { error = it.message ?: "获取播放地址失败" }
@@ -798,6 +823,8 @@ fun PlayerScreen(
                 ScrollingDanmakuOverlay(
                   resetKey = streamer?.roomId,
                   messages = danmakuMessages,
+                  revision = danmakuRevision,
+                  newCount = danmakuNewCount,
                   showUser = false,
                   areaFraction = appState.danmakuAreaFraction,
                   textScale = appState.landscapeDanmakuFontScale * appState.danmakuFontScale,
@@ -1545,10 +1572,10 @@ private fun HubDanmakuPanel(
     contentPadding = PaddingValues(0.dp),
     verticalArrangement = Arrangement.spacedBy(itemSpacing),
   ) {
-    itemsIndexed(
+    items(
       display,
-      key = { index, msg -> "${msg.roomId}:${msg.user}:${msg.content}:$index" },
-    ) { _, msg ->
+      key = { msg -> msg },
+    ) { msg ->
       HubDanmakuRow(
         user = msg.user.trim().ifBlank { "匿名" },
         content = msg.content.trim(),
@@ -1625,6 +1652,11 @@ private fun HubDanmakuRow(
 private fun ScrollingDanmakuOverlay(
   resetKey: Any?,
   messages: List<DanmakuMessage>,
+  // revision 每合并一批自增；newCount 是本批新增条数。
+  // 两者配合取代原先的「按 messages.size 差值取新增」——缓冲区满后 size 恒为
+  // danmakuMax，差值恒为 0，滚动弹幕会彻底停止上新。
+  revision: Int,
+  newCount: Int,
   showUser: Boolean,
   areaFraction: Float,
   textScale: Float = 1f,
@@ -1638,7 +1670,7 @@ private fun ScrollingDanmakuOverlay(
     val track: Int,
   )
 
-  var lastCount by remember(resetKey) { mutableIntStateOf(0) }
+  var lastRevision by remember(resetKey) { mutableIntStateOf(-1) }
   val maxActive = 48
 
   BoxWithConstraints(modifier = modifier) {
@@ -1691,12 +1723,14 @@ private fun ScrollingDanmakuOverlay(
       return bestReadyTrack.takeIf { bestReadyAt <= now + 120L }
     }
 
-    LaunchedEffect(messages.size, trackCount, widthPx, textScale) {
-      if (messages.size <= lastCount) {
-        lastCount = messages.size
-        return@LaunchedEffect
-      }
-      val newItems = messages.subList(lastCount, messages.size)
+    LaunchedEffect(revision, trackCount, widthPx, textScale) {
+      // 只有 revision 推进（真的来了新弹幕）才投放；
+      // 宽度/字号变化但 revision 未变时不重复投放同一批，避免旋转屏幕后弹幕翻倍。
+      if (revision <= lastRevision) return@LaunchedEffect
+      lastRevision = revision
+      if (newCount <= 0) return@LaunchedEffect
+      // 新弹幕一定位于列表尾部（合并用的是 takeLast）
+      val newItems = messages.takeLast(newCount.coerceAtMost(messages.size))
       newItems.forEach { msg ->
         val user = msg.user.trim().ifBlank { "匿名" }
         val content = msg.content.trim()
@@ -1720,7 +1754,6 @@ private fun ScrollingDanmakuOverlay(
           }
         }
       }
-      lastCount = messages.size
     }
 
     active.forEach { item ->
