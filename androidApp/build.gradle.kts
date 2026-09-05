@@ -24,7 +24,7 @@ android {
     applicationId = "dtv.mobile"
     minSdk = 26
     targetSdk = 36
-    versionCode = 37
+    versionCode = 38
     versionName = "0.1.22"
 
     // 只打包真机使用的 ARM 架构。抖音签名依赖的 libquickjs.so 原本会打包

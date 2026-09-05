@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
@@ -63,6 +64,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -78,7 +80,7 @@ import dtv.mobile.update.rememberUpdateManager
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
-private enum class SettingsSection { Root, Basic, Sync, Platform }
+private enum class SettingsSection { Root, Basic, Sync, Platform, About }
 
 private val PresetAccentColors = listOf(
   "青柠" to "#A3E635",
@@ -121,6 +123,7 @@ fun SettingsScreen(
         onOpenBasic = { section = SettingsSection.Basic },
         onOpenSync = { section = SettingsSection.Sync },
         onOpenPlatform = { section = SettingsSection.Platform },
+        onOpenAbout = { section = SettingsSection.About },
         modifier = Modifier.fillMaxSize(),
       )
       SettingsSection.Basic -> BasicSettingsSection(
@@ -138,6 +141,11 @@ fun SettingsScreen(
         onBack = { section = SettingsSection.Root },
         modifier = Modifier.fillMaxSize(),
       )
+      SettingsSection.About -> AboutSection(
+        appState = appState,
+        onBack = { section = SettingsSection.Root },
+        modifier = Modifier.fillMaxSize(),
+      )
     }
   }
 }
@@ -147,6 +155,7 @@ private fun SettingsRoot(
   onOpenBasic: () -> Unit,
   onOpenSync: () -> Unit,
   onOpenPlatform: () -> Unit,
+  onOpenAbout: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
   Column(
@@ -170,8 +179,158 @@ private fun SettingsRoot(
       subtitle = "局域网共享 / 导入关注、分区与屏蔽词",
       onClick = onOpenSync,
     )
-    UpdateCheckerCard()
+    SettingsItemRow(
+      icon = { Icon(imageVector = Icons.Default.Info, contentDescription = null) },
+      title = "关于",
+      subtitle = "应用介绍、检查更新与版本信息",
+      onClick = onOpenAbout,
+    )
     // 悬浮底栏（毛玻璃浮岛）叠在内容之上，滚动内容底部预留出浮岛高度
+    Spacer(
+      modifier = Modifier.height(
+        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + dtv.mobile.ui.DockContentClearance,
+      ),
+    )
+  }
+}
+
+/**
+ * 上一次发布的版本号与更新内容（「关于」页展示用）。
+ * ⚠️ 每次发新版时手动同步更新：把旧值换成「这次发版前的版本」，
+ * 当前版本则由 UpdateManager 动态读取，无需维护。
+ */
+private const val LAST_RELEASE_VERSION = "0.1.21"
+private val LAST_RELEASE_NOTES = listOf(
+  "斗鱼听播问题根治：开关听播不再重建播放器，仅摘除/挂回视频画面，即时生效零重连",
+  "检查更新的下载按钮改为等大等色、并排排列（github 原始地址 + gh-proxy.org 系列加速镜像）",
+).joinToString("\n") { "· $it" }
+
+@Composable
+private fun AboutSection(
+  appState: AppState,
+  onBack: () -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  val updateManager = rememberUpdateManager()
+  val currentVersion = updateManager.currentVersionName.ifBlank { "?" }
+
+  Column(
+    modifier = modifier
+      .verticalScroll(rememberScrollState())
+      .padding(horizontal = 18.dp, vertical = 6.dp),
+    verticalArrangement = Arrangement.spacedBy(10.dp),
+  ) {
+    SettingsSectionHeader(title = "关于", onBack = onBack)
+
+    // 头部：应用图标 + 名称 + 版本号（对齐热门 App「关于」页样式）
+    Column(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(top = 12.dp, bottom = 4.dp),
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+      Box(
+        modifier = Modifier
+          .size(76.dp)
+          .clip(RoundedCornerShape(20.dp))
+          .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+        contentAlignment = Alignment.Center,
+      ) {
+        Icon(
+          imageVector = Icons.Default.LiveTv,
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.primary,
+          modifier = Modifier.size(40.dp),
+        )
+      }
+      Text(
+        text = "dtv_mx",
+        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Black),
+      )
+      Text(
+        text = "v$currentVersion",
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+      )
+    }
+
+    // 应用简介 + 功能一览
+    SettingsCard {
+      Text(
+        "应用简介",
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+      )
+      Spacer(modifier = Modifier.height(6.dp))
+      Text(
+        text = "一款聚合多平台直播的轻量 Android 客户端，汇聚斗鱼、虎牙、抖音、Bilibili 四大平台的直播内容，配合弹幕互动，主打快速、干净、省电。",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+      )
+      Spacer(modifier = Modifier.height(8.dp))
+      listOf(
+        "多平台直播聚合：四平台一站观看，分类自动记忆",
+        "弹幕互动：横屏滚动弹幕 + 竖排弹幕列表，关键词屏蔽",
+        "画中画小窗追播，熄屏听播戴耳机只听不看他",
+        "多画质 / 多线路切换，关注管理与数据同步",
+        "主题模式与全局配色自定义",
+        "应用内检查更新，多源加速下载安装",
+      ).forEach { feature ->
+        Row(
+          modifier = Modifier.padding(vertical = 3.dp),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Box(
+            modifier = Modifier
+              .size(5.dp)
+              .clip(CircleShape)
+              .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)),
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(
+            text = feature,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+          )
+        }
+      }
+    }
+
+    // 检查更新（原设置根页入口移到这里）
+    UpdateCheckerCard()
+
+    // 上次更新：上一次版本号 + 更新内容
+    SettingsCard {
+      Text(
+        "上次更新",
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+      )
+      Spacer(modifier = Modifier.height(4.dp))
+      Text(
+        text = "v$LAST_RELEASE_VERSION",
+        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+        color = MaterialTheme.colorScheme.primary,
+      )
+      Spacer(modifier = Modifier.height(4.dp))
+      Text(
+        text = LAST_RELEASE_NOTES,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+      )
+    }
+
+    // 底部版本脚注
+    Text(
+      text = "dtv_mx v$currentVersion",
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(top = 8.dp),
+      style = MaterialTheme.typography.labelSmall,
+      color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+      textAlign = TextAlign.Center,
+    )
+
+    // 悬浮底栏预留
     Spacer(
       modifier = Modifier.height(
         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + dtv.mobile.ui.DockContentClearance,
