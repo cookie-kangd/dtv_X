@@ -215,7 +215,7 @@ private fun UpdateCheckerCard(
             )
             is UpdateState.Available -> UpdateAvailableBlock(
               info = state.info,
-              onDownload = { updateManager.download(state.info) },
+              onDownload = { url -> updateManager.download(state.info, url) },
             )
             is UpdateState.Downloading -> {
               val percent = (state.progress * 100).toInt()
@@ -322,7 +322,7 @@ private fun UpdateProgressBar(progress: Float) {
 @Composable
 private fun UpdateAvailableBlock(
   info: AppUpdateInfo,
-  onDownload: () -> Unit,
+  onDownload: (String) -> Unit,
 ) {
   // commonMain 不可使用 String.format，这里手动保留一位小数
   val sizeText = if (info.sizeBytes > 0) {
@@ -361,10 +361,22 @@ private fun UpdateAvailableBlock(
       maxLines = 6,
     )
   }
-  Button(onClick = onDownload) {
-    Icon(imageVector = Icons.Default.Download, contentDescription = null)
-    Spacer(modifier = Modifier.width(6.dp))
-    Text("下载并安装")
+  // 下载来源按钮：第一个是原始地址，其余是 gh-proxy 等加速镜像转换后的地址；
+  // 镜像带推荐标记时按钮追加 (推荐)。逐源下载，走同一套下载/安装流程。
+  Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val sources = info.downloadSources.ifEmpty {
+      listOf(dtv.mobile.update.DownloadSource("原始地址下载", info.downloadUrl))
+    }
+    sources.forEach { source ->
+      Button(
+        onClick = { onDownload(source.url) },
+        modifier = Modifier.fillMaxWidth(),
+      ) {
+        Icon(imageVector = Icons.Default.Download, contentDescription = null)
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(source.label + if (source.recommended) " (推荐)" else "")
+      }
+    }
   }
 }
 

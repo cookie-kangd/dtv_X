@@ -98,6 +98,7 @@ private fun buildPlayer(
   url: String,
   liveMode: Boolean,
   quality: VideoQuality,
+  backgroundAudio: Boolean,
 ): ExoPlayer {
   val headers = buildMap {
     put(
@@ -148,11 +149,15 @@ private fun buildPlayer(
 
   // 画质档位决定允许选择的视频轨分辨率上限。
   // 「最高」档不再限制 1080p：解除分辨率上限并强制取流中最高码率，优先保证画面清晰。
+  // 熄屏听播（backgroundAudio）时在建播放器时就关闭视频轨：
+  // 起播即纯音频、无「先出画面再关」闪烁；且避免运行期切换视频轨导致
+  // 部分机型/直播流恢复视频后渲染器卡死（表现为恢复画面后过一会定格，音频/弹幕正常）。
   val trackSelector = DefaultTrackSelector(context).apply {
     setParameters(
       buildUponParameters()
         .setMaxVideoSize(quality.maxWidth, quality.maxHeight)
         .setForceHighestSupportedBitrate(quality.forceHighestSupportedBitrate)
+        .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, backgroundAudio)
         .build(),
     )
   }
@@ -187,11 +192,30 @@ actual fun StreamPlayer(
   // 兜底：构建播放器的任何一步失败都不允许把 App 带崩，
   // 失败时降级为"零可选配置"的最简播放器继续起播。
   // 画质档位变化时重建播放器，使新的分辨率/码率策略立即生效。
-  val player = remember(url, quality) {
-    runCatching { buildPlayer(context = context, url = url, liveMode = liveMode, quality = quality) }
+  // 熄屏听播开关变化也重建播放器：视频轨的开关在建播放器时一次性定死，
+  // 不做运行期 track 切换，彻底规避「恢复画面后视频渲染器卡死」的问题
+  // （代价是每次开关听播重连一次直播流，约 1-2 秒）。
+  val player = remember(url, quality, backgroundAudio) {
+    runCatching {
+      buildPlayer(
+        context = context,
+        url = url,
+        liveMode = liveMode,
+        quality = quality,
+        backgroundAudio = backgroundAudio,
+      )
+    }
       .getOrElse { t ->
         AppLog.e("DTV-Player", "build player failed, fallback to minimal player: url=$url", t)
         ExoPlayer.Builder(context).build().apply {
+          if (backgroundAudio) {
+            runCatching {
+              trackSelectionParameters = trackSelectionParameters
+                .buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
+                .build()
+            }
+          }
           setMediaItem(MediaItem.fromUri(Uri.parse(url)))
           playWhenReady = true
           prepare()
@@ -199,8 +223,8 @@ actual fun StreamPlayer(
       }
   }
 
-  // 「熄屏听播」：开启后启动前台服务保活，并在息屏 / 切后台时关闭视频轨只留音频。
-  // 开关切换或离开播放页时释放保活并恢复视频轨。
+  // 「熄屏听播」：前台服务保活（视频轨的开/关已在建播放器时定死，这里只管保活与释放）。
+  // 开关切换或离开播放页时释放保活。
   DisposableEffect(player, backgroundAudio) {
     if (backgroundAudio) {
       BackgroundAudioController.acquire(context, player)

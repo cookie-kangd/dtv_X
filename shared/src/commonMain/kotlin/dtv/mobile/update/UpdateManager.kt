@@ -2,6 +2,29 @@ package dtv.mobile.update
 
 import androidx.compose.runtime.Composable
 
+/**
+ * 更新下载来源：更新弹窗里每个按钮对应一个来源。
+ * 第一个永远是「原始地址」；其余是 gh-proxy 等加速镜像
+ * （把原始 GitHub 下载地址拼到镜像前缀后即可走代理加速拉取）。
+ */
+data class DownloadSource(
+  val label: String,
+  val url: String,
+  val recommended: Boolean = false,
+)
+
+/** 加速镜像前缀。把原始 GitHub 下载地址拼到 [DownloadSource.url] 后即可走代理加速拉取。 */
+internal val PROXY_MIRRORS: List<ProxyMirror> = listOf(
+  ProxyMirror("gh-proxy.com", "https://gh-proxy.com/", recommended = true),
+  ProxyMirror("ghproxy.net", "https://ghproxy.net/", recommended = false),
+)
+
+internal data class ProxyMirror(
+  val host: String,
+  val base: String,
+  val recommended: Boolean,
+)
+
 /** GitHub Release 中解析出的新版本信息 */
 data class AppUpdateInfo(
   val versionName: String,
@@ -11,6 +34,7 @@ data class AppUpdateInfo(
   val notes: String,
   val publishedAt: String,
   val sizeBytes: Long,
+  val downloadSources: List<DownloadSource> = emptyList(),
 )
 
 /** 检查更新的状态机 */
@@ -28,7 +52,7 @@ interface UpdateManager {
   val state: UpdateState
   val currentVersionName: String
   fun check()
-  fun download(info: AppUpdateInfo)
+  fun download(info: AppUpdateInfo, url: String = info.downloadUrl)
   fun install(fileUri: String)
   fun reset()
 }

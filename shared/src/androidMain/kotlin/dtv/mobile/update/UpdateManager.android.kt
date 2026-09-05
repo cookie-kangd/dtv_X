@@ -107,6 +107,7 @@ class AndroidUpdateManager(
                   notes = release.body,
                   publishedAt = release.publishedAt,
                   sizeBytes = asset.size,
+                  downloadSources = buildDownloadSources(asset.browserDownloadUrl),
                 ),
               )
             } else {
@@ -122,7 +123,7 @@ class AndroidUpdateManager(
     }
   }
 
-  override fun download(info: AppUpdateInfo) {
+  override fun download(info: AppUpdateInfo, url: String) {
     if (state is UpdateState.Downloading) return
     state = UpdateState.Downloading(0f)
     scope.launch {
@@ -134,7 +135,7 @@ class AndroidUpdateManager(
             ?: error("无法在 Download 目录创建安装包文件")
           target.outputStream.use { out ->
             val request = Request.Builder()
-              .url(info.downloadUrl)
+              .url(url)
               .header("User-Agent", "DTV-Mobile")
               .build()
 
@@ -299,6 +300,19 @@ class AndroidUpdateManager(
         }
       }
     }
+  }
+
+  /** 组装下载来源：第一个是原始 GitHub 地址，其余是加速镜像转换后的地址（推荐标记透传给按钮）。 */
+  private fun buildDownloadSources(rawUrl: String): List<DownloadSource> {
+    val original = DownloadSource("原始地址下载", rawUrl)
+    val proxied = PROXY_MIRRORS.map { m ->
+      DownloadSource(
+        label = m.host,
+        url = m.base + rawUrl,
+        recommended = m.recommended,
+      )
+    }
+    return listOf(original) + proxied
   }
 
   private suspend fun fetchLatestRelease(): GitHubRelease = withContext(Dispatchers.IO) {
