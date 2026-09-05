@@ -88,6 +88,7 @@ object InMemorySubscriptionStore : SubscriptionStore {
   private var videoQuality: String = VideoQuality.Highest.name
   private var landscapeEnabled: Boolean = false
   private var exitCleanupEnabled: Boolean = true
+  private var highRefreshEnabled: Boolean = true
   private var platformOrder: List<String> = emptyList()
   private var platformDisabled: List<String> = emptyList()
 
