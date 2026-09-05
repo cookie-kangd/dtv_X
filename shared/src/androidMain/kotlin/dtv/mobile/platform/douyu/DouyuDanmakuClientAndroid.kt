@@ -1,5 +1,5 @@
 package dtv.mobile.platform.douyu
-import dtv.mobile.platform.DouyuEndpoints
+import dtv.mobile.platform.Env1
 
 import dtv.mobile.repo.DanmakuMessage
 import kotlinx.coroutines.CompletableDeferred
@@ -65,7 +65,7 @@ class DouyuDanmakuClientAndroid(
         var heartbeatJob: kotlinx.coroutines.Job? = null
         try {
           val req = Request.Builder()
-            .url(DouyuEndpoints.DANMU_WS)
+            .url(Env1.DANMU_WS)
             .addHeader("Sec-WebSocket-Protocol", "binary")
             .build()
 

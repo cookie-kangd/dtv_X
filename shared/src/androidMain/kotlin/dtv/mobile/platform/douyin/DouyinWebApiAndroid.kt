@@ -1,5 +1,5 @@
 package dtv.mobile.platform.douyin
-import dtv.mobile.platform.DouyinEndpoints
+import dtv.mobile.platform.Env3
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -126,7 +126,7 @@ class DouyinWebApiAndroid(
     )
     val query = buildQuery(params)
     val sign = withContext(Dispatchers.Default) { generateABogus(query, DEFAULT_USER_AGENT) }
-    val url = "${DouyinEndpoints.PARTITION_DETAIL}$query&a_bogus=${sign.encodeURLQueryComponent()}"
+    val url = "${Env3.PARTITION_DETAIL}$query&a_bogus=${sign.encodeURLQueryComponent()}"
 
     val text = client.get(url) {
       headers {
@@ -188,12 +188,12 @@ class DouyinWebApiAndroid(
     )
     val query = buildQuery(params)
     val sign = withContext(Dispatchers.Default) { generateABogus(query, DEFAULT_USER_AGENT) }
-    val url = "${DouyinEndpoints.ROOM_ENTER}$query&a_bogus=${sign.encodeURLQueryComponent()}"
+    val url = "${Env3.ROOM_ENTER}$query&a_bogus=${sign.encodeURLQueryComponent()}"
 
     val response = client.get(url) {
       headers {
         append("User-Agent", DEFAULT_USER_AGENT)
-        append("Referer", DouyinEndpoints.HOST + "/$webRid")
+        append("Referer", Env3.HOST + "/$webRid")
         append("Accept-Encoding", "identity")
         append("Cookie", DEFAULT_COOKIE)
       }

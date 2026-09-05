@@ -22,10 +22,10 @@ android {
 
   defaultConfig {
     applicationId = "dtv.mobile"
-    minSdk = 26
+    minSdk = 24
     targetSdk = 36
-    versionCode = 43
-    versionName = "0.2.1"
+    versionCode = 44
+    versionName = "0.2.2"
 
     // 只打包真机使用的 ARM 架构。抖音签名依赖的 libquickjs.so 原本会打包
     // 4 种 ABI（约 3.05MB），其中 x86 / x86_64 合计 1.73MB 在手机上永远用不到。
@@ -43,6 +43,8 @@ android {
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
+    // minSdk 低于 26 时 java.time 等 API 需要脱糖
+    isCoreLibraryDesugaringEnabled = true
   }
 
   kotlinOptions {
@@ -72,6 +74,8 @@ android {
 }
 
 dependencies {
+  coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+
   implementation(project(":shared"))
 
   implementation("androidx.activity:activity-compose:1.10.1")
@@ -79,6 +83,9 @@ dependencies {
   implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.4")
   // 提供 ProcessLifecycleOwner：用于监听整个 App 进入/退出前台，实现「退出时清理缓存」
   implementation("androidx.lifecycle:lifecycle-process:2.9.4")
+
+  // DtvApplication 的全局图片加载器（ImageLoaderFactory）需要 coil 核心
+  implementation("io.coil-kt:coil-compose:2.7.0")
 
   implementation(compose.material3)
   implementation(compose.ui)

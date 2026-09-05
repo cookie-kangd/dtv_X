@@ -72,11 +72,17 @@ android {
   buildToolsVersion = "36.1.0"
 
   defaultConfig {
-    minSdk = 26
+    minSdk = 24
   }
 
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
+    // minSdk 低于 26 时 java.time 等 API 需要脱糖
+    isCoreLibraryDesugaringEnabled = true
   }
+}
+
+dependencies {
+  coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }

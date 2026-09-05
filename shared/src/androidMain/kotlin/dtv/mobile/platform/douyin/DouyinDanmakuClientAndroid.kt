@@ -1,5 +1,5 @@
 package dtv.mobile.platform.douyin
-import dtv.mobile.platform.DouyinEndpoints
+import dtv.mobile.platform.Env3
 
 import android.content.Context
 import dtv.mobile.repo.DanmakuMessage
@@ -56,9 +56,9 @@ class DouyinDanmakuClientAndroid(
     private const val TAG = "DTV-Douyin"
 
     private const val USER_AGENT = DouyinWebApiAndroid.DEFAULT_USER_AGENT
-    private const val REFERER_BASE = DouyinEndpoints.HOST
+    private const val REFERER_BASE = Env3.HOST
 
-    private val WS_BASES = DouyinEndpoints.DANMU_WS_HOSTS
+    private val WS_BASES = Env3.DANMU_WS_HOSTS
 
     // 与 kotlin-danmaku-android 保持一致的参数组合（移动端已验证可用）。
     private const val VERSION_CODE = "180800"
@@ -286,7 +286,7 @@ class DouyinDanmakuClientAndroid(
           "update_version_code=$UPDATE_VERSION_CODE",
           "compress=gzip",
           "cursor=${encode("h-1_t-${ts}_r-1_d-1_u-1")}",
-          "host=${encode(DouyinEndpoints.HOST)}",
+          "host=${encode(Env3.HOST)}",
           "aid=6383",
           "live_id=1",
           "did_rule=3",

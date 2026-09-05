@@ -14,6 +14,9 @@ import androidx.compose.ui.graphics.luminance
  */
 object DtvCardDefaults {
 
+  /** 已关注状态的红（与播放器内关注图标同款，不随全局主题色变化）。 */
+  val FollowActive: Color = Color(0xFFE11D48)
+
   /** 判断当前是否深色主题（以背景亮度为准，与各卡片原逻辑一致）。 */
   @Composable
   fun isDarkTheme(): Boolean = MaterialTheme.colorScheme.background.luminance() < 0.5f

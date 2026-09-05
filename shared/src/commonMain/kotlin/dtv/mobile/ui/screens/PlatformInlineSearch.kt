@@ -3,6 +3,7 @@ package dtv.mobile.ui.screens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import dtv.mobile.ui.components.DtvCardDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -253,7 +254,7 @@ fun PlatformInlineSearch(
                   imageVector = if (followed) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                   contentDescription = if (followed) "取消关注" else "关注",
                   tint = if (followed) {
-                    MaterialTheme.colorScheme.primary
+                    DtvCardDefaults.FollowActive
                   } else {
                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                   },

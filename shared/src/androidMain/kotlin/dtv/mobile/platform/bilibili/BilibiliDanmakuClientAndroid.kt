@@ -1,5 +1,5 @@
 package dtv.mobile.platform.bilibili
-import dtv.mobile.platform.BilibiliEndpoints
+import dtv.mobile.platform.Env4
 
 import dtv.mobile.util.AppLog
 import dtv.mobile.repo.DanmakuMessage
@@ -122,12 +122,12 @@ class BilibiliDanmakuClientAndroid(
     val cached = cachedNavInfo
     if (cached != null && now - cachedWbiAtMs < 6 * 60 * 60 * 1000L) return cached
 
-    val url = BilibiliEndpoints.NAV
+    val url = Env4.NAV
     val cookie = cookieProvider()
     val text = httpClient.get(url) {
       headers {
         append("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0")
-        append("Referer", BilibiliEndpoints.HOST + "/")
+        append("Referer", Env4.HOST + "/")
         if (!cookie.isNullOrBlank()) append("Cookie", cookie)
       }
     }.bodyAsText()
@@ -168,12 +168,12 @@ class BilibiliDanmakuClientAndroid(
         "web_location" to "444.8",
       ),
     )
-    val url = "${BilibiliEndpoints.DANMU_INFO}$query"
+    val url = "${Env4.DANMU_INFO}$query"
     val cookie = cookieProvider()
     val text = httpClient.get(url) {
       headers {
         append("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-        append("Referer", BilibiliEndpoints.LIVE_HOST + "/")
+        append("Referer", Env4.LIVE_HOST + "/")
         if (!cookie.isNullOrBlank()) append("Cookie", cookie)
       }
     }.bodyAsText()
@@ -309,8 +309,8 @@ class BilibiliDanmakuClientAndroid(
           val req = Request.Builder()
             .url(wsUrl)
             .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-            .addHeader("Referer", BilibiliEndpoints.LIVE_HOST + "/")
-            .addHeader("Origin", BilibiliEndpoints.LIVE_HOST)
+            .addHeader("Referer", Env4.LIVE_HOST + "/")
+            .addHeader("Origin", Env4.LIVE_HOST)
             .build()
 
           val listener = object : WebSocketListener() {

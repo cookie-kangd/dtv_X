@@ -124,7 +124,7 @@ fun PlatformHomeContent(
         horizontalArrangement = Arrangement.spacedBy(cardMetrics.gridSpacing),
       ) {
         if (loading || appState.platformSwitchLoading) {
-          items(6, span = { GridItemSpan(1) }) {
+          items(6, span = { GridItemSpan(1) }, contentType = { "skeleton" }) {
             StreamerCardSkeleton()
           }
         } else {

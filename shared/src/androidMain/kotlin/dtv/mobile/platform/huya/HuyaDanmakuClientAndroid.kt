@@ -1,5 +1,5 @@
 package dtv.mobile.platform.huya
-import dtv.mobile.platform.HuyaEndpoints
+import dtv.mobile.platform.Env2
 
 import dtv.mobile.repo.DanmakuMessage
 import dtv.mobile.util.AppLog
@@ -88,10 +88,10 @@ class HuyaDanmakuClientAndroid(
         val done = CompletableDeferred<Unit>()
         try {
           wsClient.webSocket(
-            urlString = HuyaEndpoints.DANMU_WS,
+            urlString = Env2.DANMU_WS,
             request = {
-              header("Origin", HuyaEndpoints.HOST)
-              header("Referer", HuyaEndpoints.HOST + "/")
+              header("Origin", Env2.HOST)
+              header("Referer", Env2.HOST + "/")
               header("User-Agent", UA)
             },
           ) {

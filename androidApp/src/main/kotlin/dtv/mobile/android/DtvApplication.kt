@@ -6,12 +6,16 @@ import android.os.Looper
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import coil.ImageLoader
+import coil.ImageLoaderFactory
+import coil.disk.DiskCache
+import coil.memory.MemoryCache
 import dtv.mobile.state.SubscriptionStoreAndroid
 import dtv.mobile.util.AppCacheCleaner
 import dtv.mobile.util.AppLog
 import dtv.mobile.util.CrashFileLogger
 
-class DtvApplication : Application() {
+class DtvApplication : Application(), ImageLoaderFactory {
   private val mainHandler = Handler(Looper.getMainLooper())
   private val subscriptionStore by lazy { SubscriptionStoreAndroid(this) }
 
@@ -45,6 +49,21 @@ class DtvApplication : Application() {
       },
     )
   }
+
+  override fun newImageLoader(): ImageLoader =
+    ImageLoader.Builder(this)
+      // 内存缓存占可用内存 20%，长列表滚动复用位图不反复解码
+      .memoryCache { MemoryCache.Builder(this).maxSizePercent(0.20).build() }
+      // 直播平台 CDN 普遍下发 no-store/短缓存头；忽略这些头让磁盘缓存始终生效，
+      // 二次进入分区/搜索页封面直接命中缓存，滚动明显更流畅
+      .respectCacheHeaders(false)
+      .diskCache {
+        DiskCache.Builder()
+          .directory(cacheDir.resolve("image_cache"))
+          .maxSizeBytes(256L * 1024 * 1024)
+          .build()
+      }
+      .build()
 
   companion object {
     private const val EXIT_CLEANUP_DELAY_MS = 2000L

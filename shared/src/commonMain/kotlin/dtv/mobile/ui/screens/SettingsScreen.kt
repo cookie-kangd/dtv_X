@@ -367,11 +367,11 @@ private fun PlatformLoginSection(
  * ⚠️ 每次发新版时手动同步更新：把旧值换成「这次发版前的版本」，
  * 当前版本则由 UpdateManager 动态读取，无需维护。
  */
-private const val LAST_RELEASE_VERSION = "0.2.0"
+private const val LAST_RELEASE_VERSION = "0.2.1"
 private val LAST_RELEASE_NOTES = listOf(
-  "全新 UI 初始版本：顶栏搜索框统一加长、设置根页分组卡片化",
-  "平台登录改卡片式，退出图标右侧垂直居中；关于页检查更新包进圆角卡片",
-  "播放器硬解失败自动回退软解，坏线路更快换线",
+  "顶栏更简洁：搜索框吃满整行，板块名完整显示不再省略",
+  "新增屏幕刷新率开关：高刷屏更流畅，关闭锁定 60Hz 更省电",
+  "封面 RGB_565 解码与弹幕图层平移，长列表与弹幕渲染更流畅",
 ).joinToString("\n") { "· $it" }
 
 @Composable

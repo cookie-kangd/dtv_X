@@ -1,8 +1,8 @@
 package dtv.mobile.ui.player
-import dtv.mobile.platform.HuyaEndpoints
-import dtv.mobile.platform.DouyuEndpoints
-import dtv.mobile.platform.DouyinEndpoints
-import dtv.mobile.platform.BilibiliEndpoints
+import dtv.mobile.platform.Env2
+import dtv.mobile.platform.Env1
+import dtv.mobile.platform.Env3
+import dtv.mobile.platform.Env4
 
 import android.content.Context
 import android.net.Uri
@@ -112,10 +112,10 @@ private fun buildPlayer(
     )
     val u = url.lowercase()
     when {
-      "huya" in u -> put("Referer", HuyaEndpoints.HOST + "/")
-      "bilibili" in u -> put("Referer", BilibiliEndpoints.LIVE_HOST + "/")
-      "douyin" in u -> put("Referer", DouyinEndpoints.HOST + "/")
-      "douyu" in u -> put("Referer", DouyuEndpoints.HOST + "/")
+      "huya" in u -> put("Referer", Env2.HOST + "/")
+      "bilibili" in u -> put("Referer", Env4.LIVE_HOST + "/")
+      "douyin" in u -> put("Referer", Env3.HOST + "/")
+      "douyu" in u -> put("Referer", Env1.HOST + "/")
     }
   }
 

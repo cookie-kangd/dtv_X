@@ -99,6 +99,7 @@ import dtv.mobile.state.AppState
 import dtv.mobile.state.VideoQuality
 import dtv.mobile.theme.DtvColors
 import dtv.mobile.ui.DockContentClearance
+import dtv.mobile.ui.components.DtvCardDefaults
 import dtv.mobile.ui.components.NetworkImage
 import dtv.mobile.ui.player.PictureInPicture
 import dtv.mobile.ui.player.StreamPlayer
@@ -1156,7 +1157,7 @@ private fun PlayerHeader(
           }
 
           if (streamer != null) {
-            val iconTint = if (followed) Color(0xFFE11D48) else infoSecondary
+            val iconTint = if (followed) DtvCardDefaults.FollowActive else infoSecondary
             Box(
               modifier = Modifier
                 .size(avatarSize)

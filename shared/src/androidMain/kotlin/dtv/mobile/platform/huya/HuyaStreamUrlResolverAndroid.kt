@@ -1,5 +1,5 @@
 package dtv.mobile.platform.huya
-import dtv.mobile.platform.HuyaEndpoints
+import dtv.mobile.platform.Env2
 
 import dtv.mobile.util.AppLog
 import io.ktor.client.HttpClient
@@ -82,17 +82,17 @@ class HuyaStreamUrlResolverAndroid(
 
   suspend fun isLive(roomId: String): Boolean {
     suspend fun fetchHtml(useMobileHeaders: Boolean): String {
-      val url = "${HuyaEndpoints.HOST}/$roomId"
+      val url = "${Env2.HOST}/$roomId"
       return client.get(url) {
         headers {
           if (useMobileHeaders) {
             append("User-Agent", IOS_MOBILE_UA)
             append("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-            append("Referer", HuyaEndpoints.MOBILE_HOST + "/")
+            append("Referer", Env2.MOBILE_HOST + "/")
           } else {
             append("User-Agent", DESKTOP_UA)
             append("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
-            append("Referer", HuyaEndpoints.HOST + "/")
+            append("Referer", Env2.HOST + "/")
           }
           append("Accept-Language", "zh-CN,zh;q=0.9,en-US;q=0.6,en;q=0.4")
           append("Cookie", HUYA_WEBH5_COOKIE)
@@ -171,17 +171,17 @@ class HuyaStreamUrlResolverAndroid(
 
   suspend fun resolve(roomId: String): String {
     suspend fun fetchHtml(useMobileHeaders: Boolean): String {
-      val url = "${HuyaEndpoints.HOST}/$roomId"
+      val url = "${Env2.HOST}/$roomId"
       return client.get(url) {
         headers {
           if (useMobileHeaders) {
             append("User-Agent", IOS_MOBILE_UA)
             append("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-            append("Referer", HuyaEndpoints.MOBILE_HOST + "/")
+            append("Referer", Env2.MOBILE_HOST + "/")
           } else {
             append("User-Agent", DESKTOP_UA)
             append("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
-            append("Referer", HuyaEndpoints.HOST + "/")
+            append("Referer", Env2.HOST + "/")
           }
           append("Accept-Language", "zh-CN,zh;q=0.9,en-US;q=0.6,en;q=0.4")
           append("Cookie", HUYA_WEBH5_COOKIE)

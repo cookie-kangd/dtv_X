@@ -146,7 +146,7 @@ fun StreamerCard(
               Icon(
                 imageVector = if (followed) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 contentDescription = if (followed) "取消关注" else "关注",
-                tint = if (followed) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.9f),
+                tint = if (followed) DtvCardDefaults.FollowActive else Color.White.copy(alpha = 0.9f),
                 modifier = Modifier.size(14.dp),
               )
             }

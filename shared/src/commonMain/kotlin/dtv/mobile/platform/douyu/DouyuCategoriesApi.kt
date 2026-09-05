@@ -1,5 +1,5 @@
 package dtv.mobile.platform.douyu
-import dtv.mobile.platform.DouyuEndpoints
+import dtv.mobile.platform.Env1
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -11,7 +11,7 @@ class DouyuCategoriesApi(
   private val client: HttpClient,
 ) {
   suspend fun fetchCateList(): DouyuCateListResponse {
-    return client.get(DouyuEndpoints.CATE_LIST).body()
+    return client.get(Env1.CATE_LIST).body()
   }
 }
 

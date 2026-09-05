@@ -1,5 +1,5 @@
 package dtv.mobile.platform.douyu
-import dtv.mobile.platform.DouyuEndpoints
+import dtv.mobile.platform.Env1
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -17,7 +17,7 @@ class DouyuCate3DirectoryApi(
     limit: Int,
   ): DouyuMixListV1Response {
     val currentPage = if (page <= 0) 1 else page
-    val path = "${DouyuEndpoints.DIRECTORY_MIX_3}${cate3Id}/$currentPage"
+    val path = "${Env1.DIRECTORY_MIX_3}${cate3Id}/$currentPage"
     val url = URLBuilder(path).apply { parameters.append("limit", limit.toString()) }.buildString()
     return client.get(url).body()
   }
