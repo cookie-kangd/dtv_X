@@ -22,6 +22,7 @@
       android:name=".MainActivity"
       android:exported="true"
       android:supportsPictureInPicture="true"
+      android:persistableMode="persistNever"
       android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
@@ -40,10 +41,13 @@
         android:resource="@xml/file_paths" />
     </provider>
 
-    <!-- 「熄屏听播」保活服务：位于 shared 模块，需使用完整类名声明 -->
+    <!-- 「熄屏听播」保活服务：位于 shared 模块，需使用完整类名声明。
+         stopWithTask=true：用户划掉/退出 App 时连带停止保活服务，
+         杜绝「退出后进程仍带着常驻通知活在后台」的僵尸状态。 -->
     <service
       android:name="dtv.mobile.ui.player.LiveAudioService"
       android:exported="false"
+      android:stopWithTask="true"
       android:foregroundServiceType="mediaPlayback" />
   </application>
 </manifest>

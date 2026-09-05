@@ -21,7 +21,11 @@ import dtv.mobile.util.AppLog
  * 直播音频得以持续播放。
  *
  * 设计上刻意**不持有播放器**：播放器仍由播放页持有，这里只负责"保活"，
- * 因此不会产生任何额外的解码 / 播放开销（配合播放器关闭视频轨，内存占用极低）。
+ * 因此不会产生任何额外的解码 / 播放开销。
+ *
+ * 生命周期保证：播放页关闭（组合销毁）→ BackgroundAudioController.release → stopService；
+ * 用户划掉最近任务 / 退出 App → stopWithTask + onTaskRemoved → 立即停止；
+ * 进程被系统回收 → START_NOT_STICKY → 不会被自动重启成僵尸后台。
  */
 class LiveAudioService : Service() {
 
@@ -30,8 +34,20 @@ class LiveAudioService : Service() {
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     runCatching { startAsForeground() }
       .onFailure { AppLog.w(TAG, "startForeground failed: ${it.message}") }
-    // 进程被系统回收后尽量自动重建，保证熄屏听播不中断
-    return START_STICKY
+    // START_NOT_STICKY：服务只服务于「当前播放页」的保活。
+    // 若用 START_STICKY，进程被系统回收后服务会被自动重启——重启后的服务
+    // 并没有播放器可保活，却带着常驻通知长期占据后台（僵尸进程，
+    // 表现为「退出 App 后后台/通知里还挂着 dtv_mx」）。故绝不让它自愈重启。
+    return START_NOT_STICKY
+  }
+
+  // 兜底：部分 ROM 不理会 manifest 里的 stopWithTask，这里再显式停一次。
+  // 用户从最近任务划掉 App（或返回键退出清空任务）时，保活服务立即停止、
+  // 通知随之移除，不留任何后台痕迹。
+  override fun onTaskRemoved(rootIntent: Intent?) {
+    AppLog.i(TAG, "task removed: stopping keep-alive service")
+    runCatching { stopSelf() }
+    super.onTaskRemoved(rootIntent)
   }
 
   override fun onDestroy() {
