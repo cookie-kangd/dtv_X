@@ -15,9 +15,10 @@ import kotlinx.coroutines.flow.map
  * 实现要点：
  * 1) 触发条件同时覆盖两种情形——
  *    a. 已滚动到接近末尾（lastVisible >= count - buffer）；
- *    b. 当前内容**不足以填满一屏**（末尾元素底部仍在视口内）。
+ *    b. 当前内容**不足以填满一屏**，列表根本无法继续下滑
+ *       （gridState.canScrollForward == false）。
  *    情形 b 很关键：小栏目（如斗鱼「语音互动-唱歌」只有 5 个房间）一页装不满，
- *    用户根本滑不动，若只看 scroll 位置就永远不会触发加载，
+ *    用户滑不动，若只看 scroll 位置就永远不会触发加载，
  *    底部提示会一直停在「继续滑动加载更多」。
  * 2) 去重键是「(条件, 条目数)」而不只是条件本身：
  *    - 滚动抖动时两者都不变 → 不会重复发起请求；
@@ -42,15 +43,12 @@ fun LazyGridLoadMoreEffect(
 
   LaunchedEffect(gridState) {
     snapshotFlow {
-      val info = gridState.layoutInfo
-      val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: 0
+      val lastVisible = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
       val count = itemCountState.value
-      val lastBottom = info.visibleItemsInfo.lastOrNull()?.let { it.offset + it.size } ?: 0
       val nearEnd = lastVisible >= (count - bufferState.value).coerceAtLeast(0)
-      // 内容没填满视口（已扣除底部 contentPadding 的浮岛避让区）→ 也应继续翻页
-      val underfilled = count > 0 && lastBottom <= info.viewportEndOffset
-      // 返回 (是否触发, 当前条目数)：条目数参与去重，保证「补一页后再判定」
-      (nearEnd || underfilled) to count
+      // 内容没填满视口、无法继续下滑（已扣除底部 contentPadding 的浮岛避让区）→ 也应继续翻页
+      val cannotScroll = !gridState.canScrollForward
+      (nearEnd || cannotScroll) to count
     }
       .distinctUntilChanged()
       .filter { it.first }
