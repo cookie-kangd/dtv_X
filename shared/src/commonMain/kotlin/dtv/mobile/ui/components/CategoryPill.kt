@@ -39,7 +39,7 @@ fun CategoryPill(
     shape = CircleShape,
     color = if (selected) selectedBg else idleBg,
     tonalElevation = 0.dp,
-    shadowElevation = if (selected) 10.dp else 0.dp,
+    shadowElevation = if (selected) 6.dp else 0.dp,
   ) {
     Box(
       modifier = Modifier

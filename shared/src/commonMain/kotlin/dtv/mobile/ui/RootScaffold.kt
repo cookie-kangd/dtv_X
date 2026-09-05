@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dtv.mobile.state.CategoryMenuState
 import dtv.mobile.state.AppState
@@ -233,12 +234,14 @@ private fun HubTopBar(
       if (showPlatformActions) {
         if (categoryMenu != null) {
           Box {
-            // 与搜索框同规格（高 44dp 胶囊），背景始终为全局高亮色
+            // 与搜索框同规格（高 44dp 胶囊），背景始终为全局高亮色。
+            // 宽度固定为 4 个汉字（98dp）：各平台板块名长短不一（如「英雄联盟」4 字 /
+            // 「颜值」2 字），固定宽度可保证 4 个平台顶栏的搜索框长度完全一致。
             val menu = categoryMenu
             val currentSection = menu.options.getOrNull(menu.selectedIndex).takeIf { menu.selectedIndex >= 0 }
             Surface(
               onClick = { categoryMenuExpanded = !categoryMenuExpanded },
-              modifier = Modifier.height(44.dp),
+              modifier = Modifier.height(44.dp).width(98.dp),
               shape = RoundedCornerShape(999.dp),
               color = MaterialTheme.colorScheme.primary,
               tonalElevation = 0.dp,
@@ -255,6 +258,8 @@ private fun HubTopBar(
                   color = MaterialTheme.colorScheme.onPrimary,
                   fontWeight = FontWeight.Bold,
                   maxLines = 1,
+                  overflow = TextOverflow.Ellipsis,
+                  modifier = Modifier.weight(1f),
                 )
                 Icon(
                   imageVector = Icons.Default.ArrowDropDown,

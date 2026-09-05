@@ -87,6 +87,3 @@ val CompactCardMetrics = CardMetrics(
 )
 
 val LocalCardMetrics = staticCompositionLocalOf { NormalCardMetrics }
-
-val LocalCardMetricsCurrent: CardMetrics
-  @Composable get() = LocalCardMetrics.current

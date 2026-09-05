@@ -30,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,15 +49,15 @@ fun HomeStreamerCard(
 ) {
   val metrics = LocalCardMetrics.current
   val compact = metrics.compact
-  val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+  val isDark = DtvCardDefaults.isDarkTheme()
   // 与 Colors.kt 的冷色深色盘对齐（NightBgSecondary = 0xFF121720），避免卡片发灰而背景发蓝
-  val bg = if (isDark) Color(0xFF121720) else MaterialTheme.colorScheme.surface
-  val border = if (isDark) Color.White.copy(alpha = 0.10f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)
+  val bg = DtvCardDefaults.homeCardColor(isDark)
+  val border = DtvCardDefaults.cardBorderColor(isDark)
   val accent = MaterialTheme.colorScheme.primary
   val cover = normalizeHttpUrl(streamer.coverUrl) ?: normalizeHttpUrl(streamer.avatarUrl)
   val avatar = normalizeHttpUrl(streamer.avatarUrl)
   val offline = !streamer.isLive
-  val offlineOverlay = Color(0xFF9CA3AF).copy(alpha = 0.35f)
+  val offlineOverlay = DtvCardDefaults.offlineOverlayColor
 
   Column(
     modifier = modifier
@@ -224,7 +223,7 @@ fun HomeStreamerCard(
         Text(
           text = streamer.title,
           style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-          color = if (isDark) Color(0xFF6B7280) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+          color = DtvCardDefaults.secondaryTextColor(isDark),
           maxLines = 1,
           overflow = TextOverflow.Ellipsis,
         )

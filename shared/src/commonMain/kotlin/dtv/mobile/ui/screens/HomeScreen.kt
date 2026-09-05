@@ -1,5 +1,6 @@
 package dtv.mobile.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +24,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -74,12 +79,39 @@ fun HomeScreen(
   var moveCount by remember { mutableIntStateOf(0) }
 
   if (items.isEmpty()) {
+    // 空状态：图标徽章 + 主文案 + 引导副文案，对齐主流 App 的空态样式
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-      Text(
-        text = "暂无订阅主播",
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-      )
+      Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(horizontal = 32.dp),
+      ) {
+        Box(
+          modifier = Modifier
+            .size(72.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+          contentAlignment = Alignment.Center,
+        ) {
+          Icon(
+            imageVector = Icons.Default.FavoriteBorder,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(34.dp),
+          )
+        }
+        Text(
+          text = "还没有关注的主播",
+          style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+          color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+          text = "去底部切换到斗鱼 / 虎牙 / 抖音 / B站，搜索主播并点爱心关注，开播就会出现在这里",
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+          textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+      }
     }
     return
   }

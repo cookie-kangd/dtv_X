@@ -21,6 +21,7 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
@@ -117,6 +118,10 @@ private fun buildPlayer(
   val httpFactory = DefaultHttpDataSource.Factory()
     .setAllowCrossProtocolRedirects(true)
     .setDefaultRequestProperties(headers)
+    // 连接/读取超时从默认 8s/8s 保持紧凑：坏线路（CDN 抖动、签名失效）能更快
+    // 走到 onError → 换线路/换画质重连，而不是长时间卡在无响应的连接上。
+    .setConnectTimeoutMs(8_000)
+    .setReadTimeoutMs(8_000)
 
   // 直播走纯网络源（避免磁盘缓存带来的延迟与空间占用）；点播/回放启用 128MB 磁盘缓存。
   // 缓存初始化失败时回退到纯网络源，绝不影响起播。
@@ -164,6 +169,11 @@ private fun buildPlayer(
   }
 
   return ExoPlayer.Builder(context)
+    // 解码器回退：个别机型硬解该直播编码（如部分 HEVC 流）失败时，
+    // 自动回退到软解继续播，而不是直接抛错误黑屏。只影响异常路径，正常机型零开销。
+    .setRenderersFactory(
+      DefaultRenderersFactory(context).setEnableDecoderFallback(true),
+    )
     .setMediaSourceFactory(DefaultMediaSourceFactory(context).setDataSourceFactory(dataSourceFactory))
     .setLoadControl(loadControl)
     .setTrackSelector(trackSelector)

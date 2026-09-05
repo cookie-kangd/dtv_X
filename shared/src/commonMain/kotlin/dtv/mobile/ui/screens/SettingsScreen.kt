@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -174,36 +175,50 @@ private fun SettingsRoot(
   Column(
     modifier = modifier.verticalScroll(rememberScrollState()),
   ) {
-    SettingsItemRow(
-      icon = { Icon(imageVector = Icons.Default.Settings, contentDescription = null) },
-      title = "基本设置",
-      subtitle = "记住栏目、主题模式、全局颜色",
-      onClick = onOpenBasic,
-    )
-    SettingsItemRow(
-      icon = { Icon(imageVector = Icons.Default.LiveTv, contentDescription = null) },
-      title = "平台设置",
-      subtitle = "平台启用开关与切换栏排序",
-      onClick = onOpenPlatform,
-    )
-    SettingsItemRow(
-      icon = { Icon(imageVector = Icons.Default.AccountCircle, contentDescription = null) },
-      title = "平台登录",
-      subtitle = "B站账号二维码 / 密码登录",
-      onClick = onOpenPlatformLogin,
-    )
-    SettingsItemRow(
-      icon = { Icon(imageVector = Icons.Default.Devices, contentDescription = null) },
-      title = "数据同步",
-      subtitle = "局域网共享 / 导入关注、分区与屏蔽词",
-      onClick = onOpenSync,
-    )
-    SettingsItemRow(
-      icon = { Icon(imageVector = Icons.Default.Info, contentDescription = null) },
-      title = "关于",
-      subtitle = "应用介绍、检查更新与版本信息",
-      onClick = onOpenAbout,
-    )
+    // 入口分组卡：五个设置入口收进同一张圆角卡片，不再是散落在背景上的行
+    Surface(
+      modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 12.dp, vertical = 4.dp),
+      shape = RoundedCornerShape(16.dp),
+      color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+      border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)),
+      tonalElevation = 0.dp,
+      shadowElevation = 0.dp,
+    ) {
+      Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        SettingsItemRow(
+          icon = { Icon(imageVector = Icons.Default.Settings, contentDescription = null) },
+          title = "基本设置",
+          subtitle = "记住栏目、主题模式、全局颜色",
+          onClick = onOpenBasic,
+        )
+        SettingsItemRow(
+          icon = { Icon(imageVector = Icons.Default.LiveTv, contentDescription = null) },
+          title = "平台设置",
+          subtitle = "平台启用开关与切换栏排序",
+          onClick = onOpenPlatform,
+        )
+        SettingsItemRow(
+          icon = { Icon(imageVector = Icons.Default.AccountCircle, contentDescription = null) },
+          title = "平台登录",
+          subtitle = "B站等平台账号登录与退出",
+          onClick = onOpenPlatformLogin,
+        )
+        SettingsItemRow(
+          icon = { Icon(imageVector = Icons.Default.Devices, contentDescription = null) },
+          title = "数据同步",
+          subtitle = "局域网共享 / 导入关注、分区与屏蔽词",
+          onClick = onOpenSync,
+        )
+        SettingsItemRow(
+          icon = { Icon(imageVector = Icons.Default.Info, contentDescription = null) },
+          title = "关于",
+          subtitle = "应用介绍、检查更新与版本信息",
+          onClick = onOpenAbout,
+        )
+      }
+    }
     // 悬浮底栏（毛玻璃浮岛）叠在内容之上，滚动内容底部预留出浮岛高度
     Spacer(
       modifier = Modifier.height(
@@ -214,8 +229,9 @@ private fun SettingsRoot(
 }
 
 /**
- * 平台登录：集中管理需要登录的平台（当前仅 B站）。
- * 点击平台卡片弹出登录弹窗（二维码 / 账号密码两种方式），
+ * 平台登录：集中管理需要登录的平台（当前为 B站，后续可扩展抖音等）。
+ * 每个平台一张卡片：左侧平台信息（点击弹出登录弹窗，二维码 / 账号密码两种方式），
+ * 右侧垂直居中一个退出登录图标（仅已登录时显示），点击即退出对应平台。
  * 登录态保存在仓库 Cookie 中，升级重装后仍保留。
  */
 @Composable
@@ -245,60 +261,83 @@ private fun PlatformLoginSection(
   ) {
     SettingsSectionHeader(title = "平台登录", onBack = onBack)
 
+    // B站登录卡片：卡片主体点击 → 登录；右侧退出图标（垂直居中）点击 → 退出登录
     Surface(
-      onClick = { showLoginSheet = true },
       modifier = Modifier.fillMaxWidth(),
-      shape = RoundedCornerShape(14.dp),
+      shape = RoundedCornerShape(16.dp),
       color = MaterialTheme.colorScheme.surface,
       border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
       tonalElevation = 0.dp,
       shadowElevation = 0.dp,
     ) {
       Row(
-        modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+        modifier = Modifier
+          .clickable { showLoginSheet = true }
+          .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
       ) {
-        Icon(
-          imageVector = Icons.Default.AccountCircle,
-          contentDescription = null,
-          tint = MaterialTheme.colorScheme.primary,
-        )
-        Column(modifier = Modifier.weight(1f)) {
+        Box(
+          modifier = Modifier
+            .size(42.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+          contentAlignment = Alignment.Center,
+        ) {
+          Icon(
+            imageVector = Icons.Default.LiveTv,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+          )
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
           Text(
             text = "哔哩哔哩",
-            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Black),
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
             color = MaterialTheme.colorScheme.onSurface,
           )
           Text(
             text = when {
               checking -> "检查登录状态…"
-              loggedIn -> "已登录 · 点击可重新登录"
+              loggedIn -> "已登录 · 点击卡片可重新登录"
               else -> "未登录 · 点击扫码或密码登录"
             },
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
           )
         }
-        if (checking) {
-          CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+
+        // 右侧退出图标：与卡片内容上下居中对齐；仅已登录时展示
+        if (!checking && loggedIn) {
+          Box(
+            modifier = Modifier
+              .size(38.dp)
+              .clip(CircleShape)
+              .clickable {
+                scope.launch {
+                  runCatching { appState.repo.clearBilibiliCookie() }
+                  loggedIn = false
+                }
+              },
+            contentAlignment = Alignment.Center,
+          ) {
+            Icon(
+              imageVector = Icons.AutoMirrored.Filled.Logout,
+              contentDescription = "退出登录",
+              tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
+              modifier = Modifier.size(21.dp),
+            )
+          }
         }
       }
     }
 
-    if (loggedIn) {
-      OutlinedButton(
-        onClick = {
-          scope.launch {
-            runCatching { appState.repo.clearBilibiliCookie() }
-            loggedIn = false
-          }
-        },
-        modifier = Modifier.fillMaxWidth(),
-      ) {
-        Text(text = "退出登录", color = MaterialTheme.colorScheme.error)
-      }
-    }
+    Text(
+      text = "登录态保存在本机，升级或重装后仍会保留；点击对应平台卡片即可重新登录。",
+      style = MaterialTheme.typography.bodySmall,
+      color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+      modifier = Modifier.padding(horizontal = 4.dp),
+    )
 
     // 悬浮底栏（毛玻璃浮岛）叠在内容之上，滚动内容底部预留出浮岛高度
     Spacer(
@@ -328,11 +367,12 @@ private fun PlatformLoginSection(
  * ⚠️ 每次发新版时手动同步更新：把旧值换成「这次发版前的版本」，
  * 当前版本则由 UpdateManager 动态读取，无需维护。
  */
-private const val LAST_RELEASE_VERSION = "0.1.24"
+private const val LAST_RELEASE_VERSION = "0.1.25"
 private val LAST_RELEASE_NOTES = listOf(
-  "平台页搜索框就地输入、下拉直出搜索结果，关注/取关不用再进直播间",
-  "直播间卡片左上角新增关注徽标，首页卡片也可直接取关",
-  "板块下拉按钮显示当前板块名；更新下载新增「停止下载」并清理安装包缓存",
+  "B站登录迁移到「设置 → 平台登录」，二维码/账密登录，升级后登录态保留",
+  "板块下拉按钮与搜索框同规格、恒为全局高亮色，下拉菜单统一大圆角卡片",
+  "卡片关注徽标与人气徽标同高对齐；四平台外层界面完全统一共用组件",
+  "看直播时切换平台立即释放播放器资源，不占内存",
 ).joinToString("\n") { "· $it" }
 
 @Composable
@@ -478,55 +518,91 @@ private fun UpdateCheckerCard(
   var expanded by remember { mutableStateOf(false) }
   val currentVersion = updateManager.currentVersionName
 
-  Column(modifier = modifier.fillMaxWidth()) {
-    SettingsItemRow(
-      icon = { Icon(imageVector = Icons.Default.Download, contentDescription = null) },
-      title = "检查更新",
-      subtitle = if (currentVersion.isBlank()) "检查 GitHub Release 是否有新版本" else "当前版本 v$currentVersion",
-      onClick = {
-        expanded = true
-        updateManager.check()
-      },
-    )
+  // 检查更新整体包在圆角卡片里：不再直接贴在页面背景上，
+  // 「检查更新」入口与展开后的状态内容都在同一张卡片内，排版更整体。
+  SettingsCard(modifier = modifier) {
+    Row(
+      modifier = Modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(12.dp))
+        .clickable {
+          expanded = true
+          updateManager.check()
+        }
+        .padding(horizontal = 2.dp, vertical = 4.dp),
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+      Box(
+        modifier = Modifier
+          .size(42.dp)
+          .clip(RoundedCornerShape(12.dp))
+          .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+        contentAlignment = Alignment.Center,
+      ) {
+        Icon(
+          imageVector = Icons.Default.Download,
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.primary,
+        )
+      }
+      Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+          text = "检查更新",
+          style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+        )
+        Text(
+          text = if (currentVersion.isBlank()) {
+            "检查 GitHub Release 是否有新版本"
+          } else {
+            "当前版本 v$currentVersion · 点击检查新版本"
+          },
+          style = MaterialTheme.typography.bodySmall,
+          color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+        )
+      }
+      if (state is UpdateState.Checking) {
+        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+      } else if (!expanded) {
+        Icon(
+          imageVector = Icons.Default.Refresh,
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.primary,
+          modifier = Modifier.size(20.dp),
+        )
+      }
+    }
 
     if (expanded) {
-      Surface(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 6.dp, vertical = 2.dp),
-        shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.14f)),
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
+      Spacer(modifier = Modifier.height(10.dp))
+      Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
       ) {
-        Column(
-          modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-          verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-          when (state) {
-            UpdateState.Idle -> Unit
-            UpdateState.Checking -> UpdateStatusText(text = "正在检查更新…")
-            UpdateState.UpToDate -> UpdateStatusText(
-              text = "已是最新版本（v$currentVersion）",
-              positive = true,
-            )
-            is UpdateState.Available -> UpdateAvailableBlock(
-              info = state.info,
-              onDownload = { url -> updateManager.download(state.info, url) },
-            )
-            is UpdateState.Downloading -> {
-              val percent = (state.progress * 100).toInt()
+        when (state) {
+          UpdateState.Idle -> Unit
+          UpdateState.Checking -> UpdateStatusText(text = "正在检查更新…")
+          UpdateState.UpToDate -> UpdateStatusText(
+            text = "已是最新版本（v$currentVersion）",
+            positive = true,
+          )
+          is UpdateState.Available -> UpdateAvailableBlock(
+            info = state.info,
+            onDownload = { url -> updateManager.download(state.info, url) },
+          )
+          is UpdateState.Downloading -> {
+            val percent = (state.progress * 100).toInt()
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
               Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
               ) {
-                Column(modifier = Modifier.weight(1f)) {
-                  UpdateStatusText(text = "正在下载新版本… $percent%")
-                  Spacer(modifier = Modifier.height(6.dp))
-                  UpdateProgressBar(progress = state.progress)
-                }
+                Text(
+                  text = "正在下载新版本… $percent%",
+                  modifier = Modifier.weight(1f),
+                  style = MaterialTheme.typography.bodyMedium,
+                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                )
                 // 最右侧「停止下载」：取消所有下载并删除已缓存安装包
                 OutlinedButton(
                   onClick = { updateManager.cancelDownload() },
@@ -537,22 +613,23 @@ private fun UpdateCheckerCard(
                   Text("停止下载")
                 }
               }
+              UpdateProgressBar(progress = state.progress)
             }
-            is UpdateState.Downloaded -> {
-              UpdateStatusText(text = "安装包已缓存到 Download 目录，点击即可安装", positive = true)
-              Button(onClick = { updateManager.install(state.fileUri) }) {
-                Icon(imageVector = Icons.Default.Download, contentDescription = null)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("安装")
-              }
+          }
+          is UpdateState.Downloaded -> {
+            UpdateStatusText(text = "安装包已缓存到 Download 目录，点击即可安装", positive = true)
+            Button(onClick = { updateManager.install(state.fileUri) }) {
+              Icon(imageVector = Icons.Default.Download, contentDescription = null)
+              Spacer(modifier = Modifier.width(6.dp))
+              Text("安装")
             }
-            is UpdateState.Failed -> {
-              UpdateStatusText(text = state.message, positive = false)
-              OutlinedButton(onClick = { updateManager.check() }) {
-                Icon(imageVector = Icons.Default.Refresh, contentDescription = null)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("重试")
-              }
+          }
+          is UpdateState.Failed -> {
+            UpdateStatusText(text = state.message, positive = false)
+            OutlinedButton(onClick = { updateManager.check() }) {
+              Icon(imageVector = Icons.Default.Refresh, contentDescription = null)
+              Spacer(modifier = Modifier.width(6.dp))
+              Text("重试")
             }
           }
         }
