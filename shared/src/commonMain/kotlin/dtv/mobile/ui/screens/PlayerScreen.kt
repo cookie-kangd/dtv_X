@@ -215,14 +215,22 @@ fun PlayerScreen(
 
   // 画中画：进入前隐藏底部切换栏（playerFullscreen=true），使 PiP 画面只含视频，
   // 与横屏全屏下的画中画一致；退出 PiP 时再恢复原值。
+  // 注意：enter() 的进入结果由系统异步回调 onPictureInPictureModeChanged 上报，
+  // 因此仅在 enter() 返回 true（已提交进入）时才翻转 playerFullscreen，
+  // 避免「按下就先隐藏底栏、但进入失败」造成的状态残留；退出 PiP 时统一在
+  // LaunchedEffect 里把 playerFullscreen 恢复原值并清空标记。
   val pipPriorFullscreen = remember { mutableStateOf<Boolean?>(null) }
   val enterPip: () -> Unit = {
-    pipPriorFullscreen.value = appState.playerFullscreen
-    appState.playerFullscreen = true
-    PictureInPicture.enter(videoAspectRatio?.takeIf { it > 0f } ?: (16f / 9f))
+    val ok = PictureInPicture.enter(videoAspectRatio?.takeIf { it > 0f } ?: (16f / 9f))
+    if (ok) {
+      pipPriorFullscreen.value = appState.playerFullscreen
+      appState.playerFullscreen = true
+    }
   }
   LaunchedEffect(isInPip) {
     if (!isInPip) {
+      // 退出画中画：无论之前是否成功进入，都复位 playerFullscreen 并清空残留标记，
+      // 防止再次点击全屏时叠加上一次 PiP 的旧状态而触发异常。
       pipPriorFullscreen.value?.let { appState.playerFullscreen = it }
       pipPriorFullscreen.value = null
     }
@@ -854,6 +862,8 @@ fun PlayerScreen(
                 showFullscreen = isVideoAspectKnown && !isVerticalVideo,
                 onToggleFullscreen = {
                   if (!isClosing) {
+                    // 清空画中画残留标记，避免与本次全屏切换叠加导致状态异常
+                    pipPriorFullscreen.value = null
                     if (fullscreen) {
                       fullscreen = false
                       fullscreenEntry = if (isLandscapeLayout) FullscreenEntry.ManualOff else FullscreenEntry.None
@@ -1558,8 +1568,29 @@ private fun HubDanmakuPanel(
   val itemSpacing = if (enhancedPortrait) 8.dp else 6.dp
 
   val display = remember(messages) { messages.asReversed() }
-  LaunchedEffect(display.size) {
-    if (display.isNotEmpty()) listState.scrollToItem(index = 0)
+  // 为每条弹幕分配「按对象身份(===)稳定且唯一」的 key：
+  // - 稳定：同一条弹幕在缓冲区滚动/裁剪时引用不变，key 不变 → 不会整列重组；
+  // - 唯一：即便两条弹幕内容完全相同（如重复的"666"），因对象引用不同也拿到不同 key，
+  //   避免 LazyLayout 因重复 key 直接崩溃（之前用 msg 本身当 key，data class 的 equals
+  //   会让相同内容的弹幕撞 key，热门房几秒就触发崩溃）。
+  val keyMap = remember { mutableListOf<Pair<DanmakuMessage, Long>>() }
+  val counter = remember { longArrayOf(0L) }
+  val keyedDisplay = remember(display) {
+    // 仅保留仍在列表中的对象，防止 key 随消息滚动无限增长
+    keyMap.removeIf { (msg, _) -> display.none { it === msg } }
+    display.map { msg ->
+      val existing = keyMap.firstOrNull { it.first === msg }
+      val k = existing?.second ?: run {
+        val nk = counter[0]
+        counter[0] = nk + 1
+        keyMap.add(msg to nk)
+        nk
+      }
+      k to msg
+    }
+  }
+  LaunchedEffect(keyedDisplay.size) {
+    if (keyedDisplay.isNotEmpty()) listState.scrollToItem(index = 0)
   }
 
   LazyColumn(
@@ -1573,9 +1604,9 @@ private fun HubDanmakuPanel(
     verticalArrangement = Arrangement.spacedBy(itemSpacing),
   ) {
     items(
-      display,
-      key = { msg -> msg },
-    ) { msg ->
+      keyedDisplay,
+      key = { it.first },
+    ) { (_, msg) ->
       HubDanmakuRow(
         user = msg.user.trim().ifBlank { "匿名" },
         content = msg.content.trim(),

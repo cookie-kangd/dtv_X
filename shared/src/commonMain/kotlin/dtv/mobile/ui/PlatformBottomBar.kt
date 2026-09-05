@@ -82,11 +82,11 @@ fun PlatformBottomBar(
   // 深色底用亮灰、浅色底用深灰，保证两种模式下的对比度（此前两个值写反了）
   val inactiveIcon = if (isDark) Color(0xFF9CA3AF) else Color(0xFF6B7280)
 
-  Box(
+    Box(
     modifier = Modifier
       .fillMaxWidth()
       .navigationBarsPadding()
-      .padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 10.dp),
+      .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
   ) {
     Row(
       modifier = Modifier
@@ -95,7 +95,7 @@ fun PlatformBottomBar(
         .hazeChild(hazeState, shape = dockShape, style = glassStyle)
         .background(brush = glassHighlight, shape = dockShape)
         .border(BorderStroke(1.6.dp, borderColor), dockShape)
-        .padding(vertical = 6.dp),
+        .padding(vertical = 4.dp),
       horizontalArrangement = Arrangement.SpaceAround,
     ) {
       DockItem(
@@ -145,7 +145,7 @@ private fun RowScope.DockItem(
   onClick: () -> Unit,
   icon: @Composable () -> Unit,
 ) {
-  val scale = animateFloatAsState(targetValue = if (selected) 1.08f else 1.0f, label = "dockScale").value
+  val scale = animateFloatAsState(targetValue = if (selected) 1.06f else 1.0f, label = "dockScale").value
   val bgAlpha = animateFloatAsState(targetValue = if (selected) 1.0f else 0.0f, label = "dockBgAlpha").value
   // 去掉默认的矩形水波纹：此前点击/切换栏目时整个格子会闪出一块方形灰底，
   // 在胶囊浮岛里非常突兀。切换反馈改由选中态的胶囊高亮 + 图标/文字变色表达。
@@ -155,10 +155,10 @@ private fun RowScope.DockItem(
     modifier = Modifier
       .weight(1f)
       .clickable(interactionSource = interactionSource, indication = null) { onClick() }
-      .defaultMinSize(minHeight = 54.dp)
-      .padding(vertical = 2.dp),
+      .defaultMinSize(minHeight = 48.dp)
+      .padding(vertical = 1.dp),
     horizontalAlignment = Alignment.CenterHorizontally,
-    verticalArrangement = Arrangement.spacedBy(3.dp),
+    verticalArrangement = Arrangement.spacedBy(2.dp),
   ) {
     androidx.compose.material3.Surface(
       shape = RoundedCornerShape(percent = 50),
@@ -166,7 +166,7 @@ private fun RowScope.DockItem(
       tonalElevation = 0.dp,
       shadowElevation = 0.dp,
     ) {
-      Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+      Box(modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)) {
         Box(modifier = Modifier.graphicsLayer(scaleX = scale, scaleY = scale)) {
           icon()
         }
@@ -175,7 +175,7 @@ private fun RowScope.DockItem(
 
     Text(
       text = label,
-      style = MaterialTheme.typography.labelSmall.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium),
+      style = MaterialTheme.typography.labelSmall.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, fontSize = 10.sp),
       color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
       maxLines = 1,
       overflow = TextOverflow.Ellipsis,

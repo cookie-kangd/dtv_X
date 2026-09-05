@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import dtv.mobile.model.Platform
 import dtv.mobile.state.AppState
+import dtv.mobile.ui.DockContentClearance
 import dtv.mobile.state.ThemeMode
 import dtv.mobile.state.VideoQuality
 import dtv.mobile.ui.system.PlatformBackHandler
@@ -554,12 +555,19 @@ private fun PlatformSettingsSection(
       } else {
         PlatformReorderList(
           platforms = appState.visiblePlatforms,
-          onReorder = { notice = "顺序已更新：${appState.visiblePlatforms.joinToString(" · ") { it.title }}（无需重启）" },
-          onMove = { from, to -> appState.moveVisiblePlatform(from, to) },
-        )
-      }
+        onReorder = { notice = "顺序已更新：${appState.visiblePlatforms.joinToString(" · ") { it.title }}（无需重启）" },
+        onMove = { from, to -> appState.moveVisiblePlatform(from, to) },
+      )
     }
+
+    // 悬浮毛玻璃底栏叠在内容之上，滚动内容底部预留浮岛高度，避免最后一项（如平台排序末位）被遮挡
+    Spacer(
+      modifier = Modifier.height(
+        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + DockContentClearance,
+      ),
+    )
   }
+}
 }
 
 /** 可长按拖拽排序的纵向列表（仅用于平台排序，条目数很少，无需 LazyColumn）。 */
@@ -842,6 +850,13 @@ private fun BasicSettingsSection(
         }
       }
     }
+
+    // 悬浮毛玻璃底栏叠在内容之上，滚动内容底部预留浮岛高度，避免末项被遮挡
+    Spacer(
+      modifier = Modifier.height(
+        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + DockContentClearance,
+      ),
+    )
   }
 }
 
@@ -905,6 +920,13 @@ private fun SyncSettingsSection(
     SyncScreen(
       appState = appState,
       modifier = Modifier.fillMaxSize(),
+    )
+
+    // 悬浮毛玻璃底栏叠在内容之上，滚动内容底部预留浮岛高度，避免末项被遮挡
+    Spacer(
+      modifier = Modifier.height(
+        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + DockContentClearance,
+      ),
     )
   }
 }
