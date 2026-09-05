@@ -83,7 +83,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -125,7 +125,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.offset
-import kotlin.math.roundToInt
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.foundation.rememberScrollState
@@ -1616,6 +1615,9 @@ private fun HubDanmakuPanel(
     items(
       keyedDisplay,
       key = { it.first },
+      // 所有弹幕行同构：声明 contentType 让 LazyColumn 复用组合树/测量结果，
+      // 高频房间弹幕每秒十几条上新时的重组开销更低。
+      contentType = { "danmaku_row" },
     ) { (_, msg) ->
       HubDanmakuRow(
         user = msg.user.trim().ifBlank { "匿名" },
@@ -1839,9 +1841,13 @@ private fun ScrollingDanmakuItem(
     onFinished()
   }
 
+  // 用 graphicsLayer 而不是 Modifier.offset：offset 每帧触发布局/测量重排，
+  // graphicsLayer 只更新图层平移属性（渲染管线最廉价的一档），
+  // 同屏几十条滚动弹幕时的 CPU 占用明显更低。
   Box(
-    modifier = Modifier.offset {
-      IntOffset(x.value.roundToInt(), y.roundToInt())
+    modifier = Modifier.graphicsLayer {
+      translationX = x.value
+      translationY = y
     },
   ) {
     DanmakuBubble(

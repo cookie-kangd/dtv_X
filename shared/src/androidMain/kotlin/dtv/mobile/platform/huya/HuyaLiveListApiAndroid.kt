@@ -1,4 +1,5 @@
 package dtv.mobile.platform.huya
+import dtv.mobile.platform.HuyaEndpoints
 
 import dtv.mobile.model.Platform
 import dtv.mobile.model.Streamer
@@ -28,7 +29,7 @@ class HuyaLiveListApiAndroid(
   }
 
   suspend fun fetchLiveList(gid: String, page: Int, pageSize: Int): List<Streamer> {
-    val url = "https://live.huya.com/liveHttpUI/getLiveList?iGid=$gid&iPageNo=$page&iPageSize=$pageSize"
+    val url = "${HuyaEndpoints.LIVE_LIST}$gid&iPageNo=$page&iPageSize=$pageSize"
     val text = client.get(url) {
       headers { append("User-Agent", "Mozilla/5.0") }
     }.bodyAsText()

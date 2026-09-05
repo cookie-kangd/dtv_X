@@ -367,12 +367,11 @@ private fun PlatformLoginSection(
  * ⚠️ 每次发新版时手动同步更新：把旧值换成「这次发版前的版本」，
  * 当前版本则由 UpdateManager 动态读取，无需维护。
  */
-private const val LAST_RELEASE_VERSION = "0.1.25"
+private const val LAST_RELEASE_VERSION = "0.2.0"
 private val LAST_RELEASE_NOTES = listOf(
-  "B站登录迁移到「设置 → 平台登录」，二维码/账密登录，升级后登录态保留",
-  "板块下拉按钮与搜索框同规格、恒为全局高亮色，下拉菜单统一大圆角卡片",
-  "卡片关注徽标与人气徽标同高对齐；四平台外层界面完全统一共用组件",
-  "看直播时切换平台立即释放播放器资源，不占内存",
+  "全新 UI 初始版本：顶栏搜索框统一加长、设置根页分组卡片化",
+  "平台登录改卡片式，退出图标右侧垂直居中；关于页检查更新包进圆角卡片",
+  "播放器硬解失败自动回退软解，坏线路更快换线",
 ).joinToString("\n") { "· $it" }
 
 @Composable
@@ -1188,6 +1187,27 @@ private fun BasicSettingsSection(
         Switch(
           checked = appState.exitCleanupEnabled,
           onCheckedChange = appState::updateExitCleanupEnabled,
+        )
+      }
+    }
+
+    // 屏幕刷新率（默认开启 = 最高刷新率）
+    SettingsCard {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+          Text("屏幕刷新率", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold))
+          Text(
+            text = "开启后使用系统最高刷新率（高刷屏 90/120/144Hz 生效，滑动与动画更流畅）；关闭则锁定 60Hz 标准刷新率，更省电。切换瞬间可能有一次轻微闪烁，属正常现象。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+          )
+        }
+        Switch(
+          checked = appState.highRefreshEnabled,
+          onCheckedChange = appState::updateHighRefreshEnabled,
         )
       }
     }

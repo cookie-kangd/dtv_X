@@ -21,10 +21,14 @@ actual fun NetworkImage(
     "${u.scheme ?: "https"}://${u.host ?: "live.douyin.com"}"
   }.getOrDefault("https://live.douyin.com")
   AsyncImage(
-    // 不指定 size：Coil 会按 Modifier 约束解码，避免把整张大图读进内存
+    // 不指定 size：Coil 会按 Modifier 约束解码，避免把整张大图读进内存。
+    // allowRgb565：封面/头像都是不透明照片，用 RGB_565 解码内存占用减半，
+    // 大列表（几十张卡片）滚动时的 GC 压力显著降低；crossfade 缩短到 120ms，
+    // 减少列表快速滚动时的过渡动画开销。
     model = ImageRequest.Builder(androidx.compose.ui.platform.LocalContext.current)
       .data(url)
-      .crossfade(true)
+      .crossfade(120)
+      .allowRgb565(true)
       .setHeader("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
       .setHeader("Referer", origin)
       .build(),

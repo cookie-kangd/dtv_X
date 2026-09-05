@@ -1,4 +1,5 @@
 package dtv.mobile.platform.douyu
+import dtv.mobile.platform.DouyuEndpoints
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -15,7 +16,7 @@ class DouyuMobileApi(
     offset: Int,
     limit: Int,
   ): NewRecListResponse {
-    val url = URLBuilder("https://m.douyu.com/hgapi/live/cate/newRecList")
+    val url = URLBuilder(DouyuEndpoints.CATE_NEW_REC_LIST)
       .apply {
         parameters.append("offset", offset.toString())
         parameters.append("cate2", cate2)

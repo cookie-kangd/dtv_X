@@ -1,4 +1,5 @@
 package dtv.mobile.platform.huya.purelive
+import dtv.mobile.platform.HuyaEndpoints
 
 import android.util.Base64
 import dtv.mobile.platform.huya.purelive.tars.HYMessage
@@ -10,7 +11,7 @@ import okhttp3.Request
 import org.json.JSONObject
 
 internal object HuyaPureLiveAlgo {
-  const val SERVER_URL: String = "wss://cdnws.api.huya.com"
+  const val SERVER_URL: String = HuyaEndpoints.DANMU_WS
 
   // Heartbeat: copied 1:1 from `kotlin-huya-danmaku` (base64: ABQdAAwsNgBM)
   val HEARTBEAT_DATA: ByteArray = Base64.decode("ABQdAAwsNgBM", Base64.DEFAULT)
@@ -25,12 +26,12 @@ internal object HuyaPureLiveAlgo {
   )
 
   fun fetchJoinArgs(okHttpClient: OkHttpClient, roomId: String): JoinArgs? {
-    val url = "https://mp.huya.com/cache.php?m=Live&do=profileRoom&roomid=$roomId&showSecret=1"
+    val url = "${HuyaEndpoints.PROFILE_ROOM}$roomId&showSecret=1"
     val req = Request.Builder()
       .url(url)
       .header("Accept", "*/*")
-      .header("Origin", "https://www.huya.com")
-      .header("Referer", "https://www.huya.com/")
+      .header("Origin", HuyaEndpoints.HOST)
+      .header("Referer", HuyaEndpoints.HOST + "/")
       .header("User-Agent", USER_AGENT)
       .build()
 

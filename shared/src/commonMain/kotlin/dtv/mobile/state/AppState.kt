@@ -49,6 +49,7 @@ class AppState(
   var videoQuality: VideoQuality by mutableStateOf(VideoQuality.Highest)
   var landscapeEnabled: Boolean by mutableStateOf(false)
   var exitCleanupEnabled: Boolean by mutableStateOf(true)
+  var highRefreshEnabled: Boolean by mutableStateOf(true)
   var accentColorHex: String by mutableStateOf("")
   var platformSwitchLoading: Boolean by mutableStateOf(false)
   var selectedPlatform: Platform by mutableStateOf(Platform.Douyu)
@@ -93,6 +94,7 @@ class AppState(
     videoQuality = VideoQuality.fromNameOrHighest(subscriptionStore.loadVideoQuality())
     landscapeEnabled = subscriptionStore.loadLandscapeEnabled()
     exitCleanupEnabled = subscriptionStore.loadExitCleanupEnabled()
+    highRefreshEnabled = subscriptionStore.loadHighRefreshEnabled()
     accentColorHex = subscriptionStore.loadAccentColorHex()
     platformOrder = loadPlatformOrder()
     platformDisabled = loadPlatformDisabled()
@@ -205,6 +207,11 @@ class AppState(
   fun updateExitCleanupEnabled(enabled: Boolean) {
     exitCleanupEnabled = enabled
     subscriptionStore.saveExitCleanupEnabled(enabled)
+  }
+
+  fun updateHighRefreshEnabled(enabled: Boolean) {
+    highRefreshEnabled = enabled
+    subscriptionStore.saveHighRefreshEnabled(enabled)
   }
 
   private fun loadPlatformOrder(): List<Platform> {

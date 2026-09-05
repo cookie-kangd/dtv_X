@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -80,6 +82,8 @@ fun PlatformInlineSearch(
   }
 
   Box(modifier = modifier) {
+    // 毛玻璃质感：半透明底 + 发丝描边。暗色下用白色高光描边模拟玻璃边缘反光。
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Surface(
       modifier = Modifier
         .fillMaxWidth()
@@ -89,7 +93,14 @@ fun PlatformInlineSearch(
       color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
       tonalElevation = 0.dp,
       shadowElevation = 0.dp,
-      border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
+      border = BorderStroke(
+        1.dp,
+        if (isDark) {
+          Color.White.copy(alpha = 0.12f)
+        } else {
+          MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)
+        },
+      ),
     ) {
       Row(
         modifier = Modifier.padding(horizontal = 12.dp),

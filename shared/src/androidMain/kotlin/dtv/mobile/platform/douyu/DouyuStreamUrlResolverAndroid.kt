@@ -1,4 +1,5 @@
 package dtv.mobile.platform.douyu
+import dtv.mobile.platform.DouyuEndpoints
 
 import android.content.Context
 import dtv.mobile.repo.DouyuPlayInfo
@@ -68,7 +69,7 @@ class DouyuStreamUrlResolverAndroid(
   }
 
   private suspend fun fetchRoomDetail(roomId: String): Pair<String, Boolean> {
-    val url = "https://www.douyu.com/betard/$roomId"
+    val url = "${DouyuEndpoints.BETARD}$roomId"
     val httpResp = client.get(url) { douyuHeaders(roomId) }
     val text = httpResp.bodyAsText().trim()
     val resp = json.decodeFromString(DouyuBetardResponse.serializer(), text)
@@ -91,7 +92,7 @@ class DouyuStreamUrlResolverAndroid(
   }
 
   private suspend fun getHomeH5Enc(roomId: String): String {
-    val url = "https://www.douyu.com/swf_api/homeH5Enc?rids=$roomId"
+    val url = "${DouyuEndpoints.HOME_H5_ENC}$roomId"
     val httpResp = client.get(url) { douyuHeaders(roomId) }
     val text = httpResp.bodyAsText().trim()
     val resp = json.decodeFromString(DouyuHomeH5EncResponse.serializer(), text)
@@ -102,7 +103,7 @@ class DouyuStreamUrlResolverAndroid(
 
   private suspend fun getPlayQualities(roomId: String, signData: String): InternalPlayInfo {
     val payload = buildQualityPayload(signData)
-    val url = "https://www.douyu.com/lapi/live/getH5Play/$roomId"
+    val url = "${DouyuEndpoints.H5_PLAY}$roomId"
     val httpResp = client.post(url) {
       contentType(ContentType.Application.FormUrlEncoded)
       douyuHeaders(roomId)
@@ -130,7 +131,7 @@ class DouyuStreamUrlResolverAndroid(
 
   private suspend fun getPlayUrl(roomId: String, signData: String, rate: Int, cdn: String): String {
     val payload = "$signData&cdn=$cdn&rate=$rate"
-    val url = "https://www.douyu.com/lapi/live/getH5Play/$roomId"
+    val url = "${DouyuEndpoints.H5_PLAY}$roomId"
     val httpResp = client.post(url) {
       contentType(ContentType.Application.FormUrlEncoded)
       douyuHeaders(roomId)
@@ -151,7 +152,7 @@ class DouyuStreamUrlResolverAndroid(
 
   private fun HttpRequestBuilder.douyuHeaders(roomId: String) {
     headers {
-      set(HttpHeaders.Referrer, "https://www.douyu.com/$roomId")
+      set(HttpHeaders.Referrer, DouyuEndpoints.HOST + "/$roomId")
       set(HttpHeaders.UserAgent, DOUYU_USER_AGENT)
     }
   }

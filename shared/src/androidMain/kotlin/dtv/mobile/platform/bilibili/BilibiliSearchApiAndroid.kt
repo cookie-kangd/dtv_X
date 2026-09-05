@@ -1,4 +1,5 @@
 package dtv.mobile.platform.bilibili
+import dtv.mobile.platform.BilibiliEndpoints
 
 import dtv.mobile.model.Platform
 import dtv.mobile.model.Streamer
@@ -79,10 +80,10 @@ class BilibiliSearchApiAndroid(
     val has4 = findCookie(pairs, "buvid4") != null
     if (has3 && has4) return cookieHeader
 
-    val text = client.get("https://api.bilibili.com/x/frontend/finger/spi") {
+    val text = client.get(BilibiliEndpoints.FINGER_SPI) {
       headers {
         append("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36")
-        append("Referer", "https://live.bilibili.com/")
+        append("Referer", BilibiliEndpoints.LIVE_HOST + "/")
         if (cookieHeader.isNotBlank()) append("Cookie", cookieHeader)
       }
     }.bodyAsText()
@@ -104,7 +105,7 @@ class BilibiliSearchApiAndroid(
     val cookieHeader = runCatching { ensureBuvid(initialCookie) }.getOrElse { initialCookie }
     if (cookieHeader.isNotBlank()) cookieStore.mergeFromCookieHeader(cookieHeader)
 
-    val text = client.get("https://api.bilibili.com/x/web-interface/search/type") {
+    val text = client.get(BilibiliEndpoints.SEARCH_TYPE) {
       parameter("context", "")
       parameter("search_type", "live")
       parameter("cover_type", "user_cover")
@@ -118,7 +119,7 @@ class BilibiliSearchApiAndroid(
       parameter("page", page.toString())
       headers {
         append("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36")
-        append("Referer", "https://live.bilibili.com/")
+        append("Referer", BilibiliEndpoints.LIVE_HOST + "/")
         if (cookieHeader.isNotBlank()) append("Cookie", cookieHeader)
       }
     }.bodyAsText()

@@ -1,4 +1,5 @@
 package dtv.mobile.platform.huya
+import dtv.mobile.platform.HuyaEndpoints
 
 import dtv.mobile.model.Platform
 import dtv.mobile.model.Streamer
@@ -33,7 +34,7 @@ class HuyaSearchApiAndroid(
     if (trimmed.isEmpty()) return emptyList()
 
     val start = ((page - 1).coerceAtLeast(0) * 20).toString()
-    val text = client.get("https://search.cdn.huya.com/") {
+    val text = client.get(HuyaEndpoints.SEARCH_CDN) {
       parameter("m", "Search")
       parameter("do", "getSearchContent")
       parameter("q", trimmed)
@@ -45,8 +46,8 @@ class HuyaSearchApiAndroid(
       parameter("start", start)
       headers {
         append("User-Agent", "Mozilla/5.0")
-        append("Referer", "https://www.huya.com/search/")
-        append("Origin", "https://www.huya.com")
+        append("Referer", HuyaEndpoints.SEARCH_PAGE)
+        append("Origin", HuyaEndpoints.HOST)
         append("Accept", "*/*")
       }
     }.bodyAsText()

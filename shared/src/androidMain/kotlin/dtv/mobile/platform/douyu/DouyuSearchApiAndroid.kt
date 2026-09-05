@@ -1,4 +1,5 @@
 package dtv.mobile.platform.douyu
+import dtv.mobile.platform.DouyuEndpoints
 
 import dtv.mobile.model.Platform
 import dtv.mobile.model.Streamer
@@ -64,13 +65,13 @@ class DouyuSearchApiAndroid(
     val didSeed = "${System.nanoTime()}-${Random.nextInt()}"
     val did = md5Hex(didSeed)
 
-    val text = client.get("https://www.douyu.com/japi/search/api/searchUser") {
+    val text = client.get(DouyuEndpoints.SEARCH_USER) {
       parameter("kw", trimmed)
       parameter("page", "1")
       parameter("pageSize", "20")
       parameter("filterType", "0")
       headers {
-        append("Referer", "https://www.douyu.com/search/")
+        append("Referer", DouyuEndpoints.SEARCH_PAGE)
         append("Cookie", "dy_did=$did; acf_did=$did")
       }
     }.bodyAsText()

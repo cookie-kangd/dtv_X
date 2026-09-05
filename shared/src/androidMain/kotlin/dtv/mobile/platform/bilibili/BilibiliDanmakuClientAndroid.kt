@@ -1,4 +1,5 @@
 package dtv.mobile.platform.bilibili
+import dtv.mobile.platform.BilibiliEndpoints
 
 import dtv.mobile.util.AppLog
 import dtv.mobile.repo.DanmakuMessage
@@ -121,12 +122,12 @@ class BilibiliDanmakuClientAndroid(
     val cached = cachedNavInfo
     if (cached != null && now - cachedWbiAtMs < 6 * 60 * 60 * 1000L) return cached
 
-    val url = "https://api.bilibili.com/x/web-interface/nav"
+    val url = BilibiliEndpoints.NAV
     val cookie = cookieProvider()
     val text = httpClient.get(url) {
       headers {
         append("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:138.0) Gecko/20100101 Firefox/138.0")
-        append("Referer", "https://www.bilibili.com/")
+        append("Referer", BilibiliEndpoints.HOST + "/")
         if (!cookie.isNullOrBlank()) append("Cookie", cookie)
       }
     }.bodyAsText()
@@ -167,12 +168,12 @@ class BilibiliDanmakuClientAndroid(
         "web_location" to "444.8",
       ),
     )
-    val url = "https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo?$query"
+    val url = "${BilibiliEndpoints.DANMU_INFO}$query"
     val cookie = cookieProvider()
     val text = httpClient.get(url) {
       headers {
         append("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-        append("Referer", "https://live.bilibili.com/")
+        append("Referer", BilibiliEndpoints.LIVE_HOST + "/")
         if (!cookie.isNullOrBlank()) append("Cookie", cookie)
       }
     }.bodyAsText()
@@ -308,8 +309,8 @@ class BilibiliDanmakuClientAndroid(
           val req = Request.Builder()
             .url(wsUrl)
             .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
-            .addHeader("Referer", "https://live.bilibili.com/")
-            .addHeader("Origin", "https://live.bilibili.com")
+            .addHeader("Referer", BilibiliEndpoints.LIVE_HOST + "/")
+            .addHeader("Origin", BilibiliEndpoints.LIVE_HOST)
             .build()
 
           val listener = object : WebSocketListener() {

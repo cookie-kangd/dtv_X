@@ -1,4 +1,5 @@
 package dtv.mobile.platform.huya
+import dtv.mobile.platform.HuyaEndpoints
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -27,7 +28,7 @@ internal data class HuyaChatDecoded(
  * Huya danmaku algorithm ported 1:1 from `huya-danmaku-kotlin` (DTV-heroui aligned).
  */
 internal object HuyaDtvHerouiAlgo {
-  private const val WS_URL = "wss://cdnws.api.huya.com"
+  private const val WS_URL = HuyaEndpoints.DANMU_WS
 
   private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
@@ -35,10 +36,10 @@ internal object HuyaDtvHerouiAlgo {
     val rid = roomIdOrUrl.toRoomId()
     val page = fetchText(
       client,
-      "https://www.huya.com/$rid",
+      "${HuyaEndpoints.HOST}/$rid",
       headers = mapOf(
         "User-Agent" to genUa(),
-        "Referer" to "https://www.huya.com/",
+        "Referer" to (HuyaEndpoints.HOST + "/"),
       ),
     )
 
@@ -136,7 +137,7 @@ internal object HuyaDtvHerouiAlgo {
     Regex("""\\\"ayyuid\\\"\s*:\s*\\\"?(\d+)\\\"?""").find(page)?.groupValues?.getOrNull(1)?.let { return it }
     Regex("""\\\"yyuid\\\"\s*:\s*\\\"?(\d+)\\\"?""").find(page)?.groupValues?.getOrNull(1)?.let { return it }
 
-    val api = "https://mp.huya.com/cache.php?m=Live&do=profileRoom&roomid=$rid"
+    val api = "${HuyaEndpoints.PROFILE_ROOM}$rid"
     val body = fetchText(client, api, headers = mapOf("User-Agent" to genUa()))
     runCatching {
       val j = json.parseToJsonElement(body)

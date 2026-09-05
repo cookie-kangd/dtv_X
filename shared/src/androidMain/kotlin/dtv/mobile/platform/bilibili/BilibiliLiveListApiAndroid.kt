@@ -1,4 +1,5 @@
 package dtv.mobile.platform.bilibili
+import dtv.mobile.platform.BilibiliEndpoints
 
 import dtv.mobile.model.Platform
 import dtv.mobile.model.Streamer
@@ -53,13 +54,13 @@ class BilibiliLiveListApiAndroid(
       return cached
     }
 
-    val html = client.get("https://live.bilibili.com/lol") {
+    val html = client.get(BilibiliEndpoints.LIST_PAGE_LOL) {
       headers {
         append(
           "User-Agent",
           "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
         )
-        append("Referer", "https://www.bilibili.com/")
+        append("Referer", BilibiliEndpoints.HOST + "/")
       }
     }.bodyAsText()
 
@@ -91,13 +92,13 @@ class BilibiliLiveListApiAndroid(
     val signString = pairs.joinToString("&") { (k, v) -> "$k=$v" } + secret
     val wRid = md5Hex(signString)
 
-    val text = client.get("https://api.live.bilibili.com/xlive/web-interface/v1/second/getList") {
+    val text = client.get(BilibiliEndpoints.AREA_LIST_SECOND) {
       headers {
         append(
           "User-Agent",
           "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
         )
-        append("Referer", "https://www.bilibili.com/")
+        append("Referer", BilibiliEndpoints.HOST + "/")
         append("Cookie", "buvid3=i;")
       }
       pairs.forEach { (k, v) -> parameter(k, v) }
@@ -114,11 +115,11 @@ class BilibiliLiveListApiAndroid(
 
   private suspend fun fetchHotIndexList(page: Int, pageSize: Int): List<JsonObject> {
     val url =
-      "https://api.live.bilibili.com/xlive/web-interface/v1/index/getList?platform=web&parent_area_id=0&area_id=0&page=$page&page_size=$pageSize"
+      "${BilibiliEndpoints.INDEX_LIST}$page&page_size=$pageSize"
     val text = client.get(url) {
       headers {
         append("User-Agent", "Mozilla/5.0")
-        append("Referer", "https://live.bilibili.com/")
+        append("Referer", BilibiliEndpoints.LIVE_HOST + "/")
       }
     }.bodyAsText()
 

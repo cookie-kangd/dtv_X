@@ -1,4 +1,5 @@
 package dtv.mobile.platform.douyu
+import dtv.mobile.platform.DouyuEndpoints
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -11,7 +12,7 @@ class DouyuThreeCateApi(
   private val client: HttpClient,
 ) {
   suspend fun fetchThreeCate(tagId: String): DouyuThreeCateResponse {
-    val url = URLBuilder("https://capi.douyucdn.cn/api/v1/getThreeCate")
+    val url = URLBuilder(DouyuEndpoints.THREE_CATE)
       .apply {
         parameters.append("tag_id", tagId)
         parameters.append("client_sys", "android")

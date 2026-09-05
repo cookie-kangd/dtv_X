@@ -17,6 +17,7 @@ import dtv.mobile.ui.components.DtvBackground
 import dtv.mobile.ui.components.LocalCardMetrics
 import dtv.mobile.ui.components.NormalCardMetrics
 import dtv.mobile.ui.RootScaffold
+import dtv.mobile.ui.system.HighRefreshRateEffect
 
 @Composable
 fun App(
@@ -30,7 +31,11 @@ fun App(
       LocalCardMetrics provides cardMetrics,
       LocalVideoQuality provides appState.videoQuality,
     ) {
-      Surface(modifier = Modifier.fillMaxSize()) { DtvBackground { RootScaffold(appState = appState) } }
+      Surface(modifier = Modifier.fillMaxSize()) {
+        // 屏幕刷新率适配：默认跟随系统最高刷新率，可在「设置-基本设置」关闭为 60Hz
+        HighRefreshRateEffect(enabled = appState.highRefreshEnabled)
+        DtvBackground { RootScaffold(appState = appState) }
+      }
     }
   }
 }

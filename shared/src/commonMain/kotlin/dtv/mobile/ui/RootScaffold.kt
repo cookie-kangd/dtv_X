@@ -39,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dtv.mobile.state.CategoryMenuState
 import dtv.mobile.state.AppState
@@ -105,7 +104,9 @@ fun RootScaffold(appState: AppState) {
         }
         else -> {
           HubTopBar(
-            title = if (appState.currentScreen == Screen.Home) "关注列表" else appState.selectedPlatform.title,
+            // 平台页不再显示左侧平台名（毛玻璃底栏已标明当前平台，重复展示纯属多余），
+            // 让搜索框吃到整行剩余宽度；首页保留「关注列表」标题。
+            title = if (appState.currentScreen == Screen.Home) "关注列表" else null,
             appState = appState,
             categoryMenu = appState.categoryMenu,
             showSearch = appState.currentScreen != Screen.Home,
@@ -184,7 +185,7 @@ fun RootScaffold(appState: AppState) {
 
 @Composable
 private fun HubTopBar(
-  title: String,
+  title: String?,
   appState: AppState,
   categoryMenu: CategoryMenuState?,
   showSearch: Boolean,
@@ -208,15 +209,17 @@ private fun HubTopBar(
       verticalAlignment = Alignment.CenterVertically,
       horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-      Text(
-        text = title,
-        color = MaterialTheme.colorScheme.primary,
-        style = MaterialTheme.typography.titleLarge.copy(
-          fontWeight = FontWeight.Black,
-          fontStyle = FontStyle.Italic,
-        ),
-        modifier = Modifier.padding(top = 4.dp),
-      )
+      if (title != null) {
+        Text(
+          text = title,
+          color = MaterialTheme.colorScheme.primary,
+          style = MaterialTheme.typography.titleLarge.copy(
+            fontWeight = FontWeight.Black,
+            fontStyle = FontStyle.Italic,
+          ),
+          modifier = Modifier.padding(top = 4.dp),
+        )
+      }
 
       if (showSearch) {
         // 内联搜索框：就地输入、下拉展示搜索结果，可进直播间/关注主播，不再跳搜索页
@@ -235,13 +238,14 @@ private fun HubTopBar(
         if (categoryMenu != null) {
           Box {
             // 与搜索框同规格（高 44dp 胶囊），背景始终为全局高亮色。
-            // 宽度固定为 4 个汉字（98dp）：各平台板块名长短不一（如「英雄联盟」4 字 /
-            // 「颜值」2 字），固定宽度可保证 4 个平台顶栏的搜索框长度完全一致。
+            // 宽度按「4 个汉字 + 图标」定死（108dp：文字区 66dp > 4×14sp=56dp），
+            // 板块名最长 4 个字必然完整显示，不会出现省略号；同时保证 4 个平台
+            // 顶栏的搜索框长度完全一致。去掉平台名后搜索框吃到整行剩余宽度。
             val menu = categoryMenu
             val currentSection = menu.options.getOrNull(menu.selectedIndex).takeIf { menu.selectedIndex >= 0 }
             Surface(
               onClick = { categoryMenuExpanded = !categoryMenuExpanded },
-              modifier = Modifier.height(44.dp).width(98.dp),
+              modifier = Modifier.height(44.dp).width(108.dp),
               shape = RoundedCornerShape(999.dp),
               color = MaterialTheme.colorScheme.primary,
               tonalElevation = 0.dp,
@@ -258,7 +262,7 @@ private fun HubTopBar(
                   color = MaterialTheme.colorScheme.onPrimary,
                   fontWeight = FontWeight.Bold,
                   maxLines = 1,
-                  overflow = TextOverflow.Ellipsis,
+                  softWrap = false,
                   modifier = Modifier.weight(1f),
                 )
                 Icon(

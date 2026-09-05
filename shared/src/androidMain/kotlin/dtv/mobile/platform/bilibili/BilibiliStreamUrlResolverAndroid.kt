@@ -1,4 +1,5 @@
 package dtv.mobile.platform.bilibili
+import dtv.mobile.platform.BilibiliEndpoints
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -33,11 +34,11 @@ class BilibiliStreamUrlResolverAndroid(
   suspend fun resolve(roomId: String, qn: Int? = null): String {
     val quality = qn ?: 10000
     val url =
-      "https://api.live.bilibili.com/xlive/web-room/v2/index/getRoomPlayInfo?room_id=$roomId&protocol=0,1&format=0,1,2&codec=0,1&qn=$quality&platform=web"
+      "${BilibiliEndpoints.ROOM_PLAY_INFO}$roomId&protocol=0,1&format=0,1,2&codec=0,1&qn=$quality&platform=web"
     val text = client.get(url) {
       headers {
         append("User-Agent", "Mozilla/5.0")
-        append("Referer", "https://live.bilibili.com/")
+        append("Referer", BilibiliEndpoints.LIVE_HOST + "/")
         val cookie = cookieProvider()?.trim().orEmpty()
         if (cookie.isNotEmpty()) append("Cookie", cookie)
       }

@@ -138,6 +138,13 @@ class SubscriptionStoreAndroid(
     prefs.edit().putBoolean("exit_cleanup_enabled", value).apply()
   }
 
+  // 屏幕刷新率：默认开启（跟随系统最高刷新率）
+  override fun loadHighRefreshEnabled(): Boolean = prefs.getBoolean("high_refresh_enabled", true)
+
+  override fun saveHighRefreshEnabled(value: Boolean) {
+    prefs.edit().putBoolean("high_refresh_enabled", value).apply()
+  }
+
   // 平台排列顺序（按枚举名保存）。为空表示尚未自定义，由 AppState 回落到默认顺序。
   override fun loadPlatformOrder(): List<String> {
     val raw = prefs.getString("platform_order", null)?.takeIf { it.isNotBlank() } ?: return emptyList()

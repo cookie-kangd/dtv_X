@@ -1,4 +1,5 @@
 package dtv.mobile.platform.bilibili
+import dtv.mobile.platform.BilibiliEndpoints
 
 import dtv.mobile.repo.BilibiliQrCode
 import dtv.mobile.repo.BilibiliQrPollResult
@@ -28,7 +29,7 @@ class BilibiliAuthApiAndroid(
   }
 
   suspend fun generateQrCode(): BilibiliQrCode {
-    val url = "https://passport.bilibili.com/x/passport-login/web/qrcode/generate"
+    val url = BilibiliEndpoints.QRCODE_GENERATE
     val text = client.get(url) {
       headers { append("User-Agent", "Mozilla/5.0") }
     }.bodyAsText()
@@ -41,7 +42,7 @@ class BilibiliAuthApiAndroid(
   }
 
   suspend fun pollQrCode(qrcodeKey: String): BilibiliQrPollResult {
-    val url = "https://passport.bilibili.com/x/passport-login/web/qrcode/poll?qrcode_key=$qrcodeKey"
+    val url = "${BilibiliEndpoints.QRCODE_POLL}$qrcodeKey"
     val resp: HttpResponse = client.get(url) {
       headers { append("User-Agent", "Mozilla/5.0") }
     }

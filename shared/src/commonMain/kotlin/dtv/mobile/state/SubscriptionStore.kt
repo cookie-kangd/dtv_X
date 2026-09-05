@@ -58,6 +58,11 @@ interface SubscriptionStore {
   fun loadExitCleanupEnabled(): Boolean
   fun saveExitCleanupEnabled(value: Boolean)
 
+  // 屏幕刷新率：默认开启 = 跟随系统最高刷新率（高刷屏更流畅）；
+  // 关闭 = 锁定 60Hz 标准刷新率（更省电）。
+  fun loadHighRefreshEnabled(): Boolean
+  fun saveHighRefreshEnabled(value: Boolean)
+
   // 平台设置：底部切换栏显示哪些平台，以及它们的排列顺序。
   // 两者都按"平台枚举名"持久化，避免 Platform 枚举顺序变动导致的历史数据错位。
   fun loadPlatformOrder(): List<String>
@@ -174,6 +179,12 @@ object InMemorySubscriptionStore : SubscriptionStore {
 
   override fun saveExitCleanupEnabled(value: Boolean) {
     exitCleanupEnabled = value
+  }
+
+  override fun loadHighRefreshEnabled(): Boolean = highRefreshEnabled
+
+  override fun saveHighRefreshEnabled(value: Boolean) {
+    highRefreshEnabled = value
   }
 
   override fun loadPlatformOrder(): List<String> = platformOrder
