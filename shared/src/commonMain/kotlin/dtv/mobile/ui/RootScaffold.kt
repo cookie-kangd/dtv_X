@@ -142,18 +142,9 @@ fun RootScaffold(appState: AppState) {
           )
         }
         Screen.Settings -> {
-          CenterAlignedTopAppBar(
-            title = { Text(text = "设置") },
-            navigationIcon = {
-              IconButton(onClick = { appState.back() }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-              }
-            },
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-              containerColor = Color.Transparent,
-              scrolledContainerColor = Color.Transparent,
-            ),
-          )
+          // 设置页的标题与返回按钮由 SettingsScreen 自己渲染（根页大返回回首页，
+          // 子页大返回回设置根页），顶栏不再叠加返回图标，避免出现两个返回。
+          Unit
         }
         else -> {
           HubTopBar(

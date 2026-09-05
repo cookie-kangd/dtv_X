@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -227,7 +228,7 @@ actual fun StreamPlayer(
   // 开关切换或离开播放页时释放保活。
   DisposableEffect(player, backgroundAudio) {
     if (backgroundAudio) {
-      BackgroundAudioController.acquire(context, player)
+      BackgroundAudioController.acquire(context)
     }
     onDispose {
       if (backgroundAudio) {
@@ -318,40 +319,47 @@ actual fun StreamPlayer(
     }
   }
 
-  AndroidView(
-    modifier = modifier,
-    factory = {
-      PlayerView(it).apply {
-        useController = false
-        controllerAutoShow = false
-        setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-        resizeMode = if (zoomToFill) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
-        // Keep screen on during playback (some Android 16 devices will otherwise follow a short system timeout).
-        keepScreenOn = true
-        this.player = player
-      }
-    },
-    onRelease = { view ->
-      // 复位屏幕常亮，避免离开播放页后系统仍保持常亮耗电
-      view.keepScreenOn = false
-      // Detach the player before the view is recycled so the composable-level
-      // release below is the only owner of the ExoPlayer lifecycle.
-      if (view.player === player) {
-        view.player = null
-      }
-    },
-    update = { view ->
-      view.resizeMode = if (zoomToFill) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
-      view.useController = false
-      view.controllerAutoShow = false
-      view.keepScreenOn = true
-      if (view.player !== player) {
-        view.player = player
-      }
-      view.post {
-        view.requestLayout()
-        view.invalidate()
-      }
-    },
-  )
+  // key(player)：播放器重建（开关听播/换画质/换线路）时，把 PlayerView 与其内部
+  // SurfaceView 一并换新。SurfaceView 的 surface 被旧播放器用过之后，在部分机型上
+  // 复用给新播放器会出现「视频渲染器卡死、画面定格」（音频/弹幕正常）；
+  // 全新 view 拿到全新 surface，从根上消除复用隐患。旧 view 卸载时 onRelease
+  // 会先摘除旧播放器引用，旧播放器由上面的 DisposableEffect 负责释放。
+  key(player) {
+    AndroidView(
+      modifier = modifier,
+      factory = {
+        PlayerView(it).apply {
+          useController = false
+          controllerAutoShow = false
+          setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
+          resizeMode = if (zoomToFill) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
+          // Keep screen on during playback (some Android 16 devices will otherwise follow a short system timeout).
+          keepScreenOn = true
+          this.player = player
+        }
+      },
+      onRelease = { view ->
+        // 复位屏幕常亮，避免离开播放页后系统仍保持常亮耗电
+        view.keepScreenOn = false
+        // Detach the player before the view is recycled so the composable-level
+        // release below is the only owner of the ExoPlayer lifecycle.
+        if (view.player === player) {
+          view.player = null
+        }
+      },
+      update = { view ->
+        view.resizeMode = if (zoomToFill) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
+        view.useController = false
+        view.controllerAutoShow = false
+        view.keepScreenOn = true
+        if (view.player !== player) {
+          view.player = player
+        }
+        view.post {
+          view.requestLayout()
+          view.invalidate()
+        }
+      },
+    )
+  }
 }

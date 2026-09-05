@@ -57,7 +57,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -108,28 +107,37 @@ fun SettingsScreen(
 
   PlatformBackHandler(enabled = section != SettingsSection.Root) { section = SettingsSection.Root }
 
-  when (section) {
-    SettingsSection.Root -> SettingsRoot(
-      onOpenBasic = { section = SettingsSection.Basic },
-      onOpenSync = { section = SettingsSection.Sync },
-      onOpenPlatform = { section = SettingsSection.Platform },
-      modifier = modifier.fillMaxSize(),
-    )
-    SettingsSection.Basic -> BasicSettingsSection(
-      appState = appState,
-      onBack = { section = SettingsSection.Root },
-      modifier = modifier.fillMaxSize(),
-    )
-    SettingsSection.Sync -> SyncSettingsSection(
-      appState = appState,
-      onBack = { section = SettingsSection.Root },
-      modifier = modifier.fillMaxSize(),
-    )
-    SettingsSection.Platform -> PlatformSettingsSection(
-      appState = appState,
-      onBack = { section = SettingsSection.Root },
-      modifier = modifier.fillMaxSize(),
-    )
+  // 返回层级唯一化：根页一个大返回（回首页），子页一个大返回（回设置根页）。
+  // 顶栏不再叠加返回图标（见 RootScaffold），系统返回键行为与此一致。
+  Column(modifier = modifier.fillMaxSize()) {
+    if (section == SettingsSection.Root) {
+      Row(modifier = Modifier.padding(start = 6.dp, end = 18.dp, top = 6.dp, bottom = 2.dp)) {
+        SettingsSectionHeader(title = "设置", onBack = { appState.back() })
+      }
+    }
+    when (section) {
+      SettingsSection.Root -> SettingsRoot(
+        onOpenBasic = { section = SettingsSection.Basic },
+        onOpenSync = { section = SettingsSection.Sync },
+        onOpenPlatform = { section = SettingsSection.Platform },
+        modifier = Modifier.fillMaxSize(),
+      )
+      SettingsSection.Basic -> BasicSettingsSection(
+        appState = appState,
+        onBack = { section = SettingsSection.Root },
+        modifier = Modifier.fillMaxSize(),
+      )
+      SettingsSection.Sync -> SyncSettingsSection(
+        appState = appState,
+        onBack = { section = SettingsSection.Root },
+        modifier = Modifier.fillMaxSize(),
+      )
+      SettingsSection.Platform -> PlatformSettingsSection(
+        appState = appState,
+        onBack = { section = SettingsSection.Root },
+        modifier = Modifier.fillMaxSize(),
+      )
+    }
   }
 }
 
@@ -435,14 +443,6 @@ private fun SettingsItemRow(
           color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
         )
       }
-      Icon(
-        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-        contentDescription = null,
-        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
-        modifier = Modifier
-          .size(20.dp)
-          .rotate(180f),
-      )
     }
   }
 }
