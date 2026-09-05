@@ -19,10 +19,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import dtv.mobile.util.AppLog
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
@@ -77,6 +80,7 @@ class AndroidUpdateManager(
   }.getOrNull().orEmpty()
 
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+  private var downloadJob: Job? = null
   private val json = Json { ignoreUnknownKeys = true }
   private val client = OkHttpClient.Builder()
     .connectTimeout(20, TimeUnit.SECONDS)
@@ -126,7 +130,7 @@ class AndroidUpdateManager(
   override fun download(info: AppUpdateInfo, url: String) {
     if (state is UpdateState.Downloading) return
     state = UpdateState.Downloading(0f)
-    scope.launch {
+    downloadJob = scope.launch {
       val result = runCatching {
         withContext(Dispatchers.IO) {
           // 缓存到系统「Download」公共目录（用户在文件管理器/下载管理中可见），
@@ -147,6 +151,8 @@ class AndroidUpdateManager(
                 val buffer = ByteArray(16 * 1024)
                 var downloaded = 0L
                 while (true) {
+                  // 响应取消：写循环里定期检查，让「停止下载」即时生效
+                  ensureActive()
                   val read = input.read(buffer)
                   if (read == -1) break
                   out.write(buffer, 0, read)
@@ -172,10 +178,23 @@ class AndroidUpdateManager(
           install(uri.toString())
         },
         onFailure = { e ->
+          // 「停止下载」触发的取消：静默返回，不报错（缓存清理由 cancelDownload 负责）
+          if (e is CancellationException) return@fold
           AppLog.e("DTV-Update", "download failed", e)
           state = UpdateState.Failed(e.message ?: "下载失败")
         },
       )
+    }
+  }
+
+  override fun cancelDownload() {
+    downloadJob?.cancel()
+    downloadJob = null
+    // 立即复位状态，UI 马上退出「下载中」
+    if (state is UpdateState.Downloading) state = UpdateState.Idle
+    // 删除 Download 目录里所有本应用的安装包缓存（含本次未完成的下载残留）
+    scope.launch {
+      withContext(Dispatchers.IO) { deleteCachedApks() }
     }
   }
 
@@ -298,6 +317,37 @@ class AndroidUpdateManager(
             resolver.delete(ContentUris.withAppendedId(collection, id), null, null)
           }
         }
+      }
+    }
+  }
+
+  /**
+   * 删除 Download 目录里所有本应用的安装包缓存（dtv-mx-*.apk），
+   * 包括未完成的下载残留（IS_PENDING 文件）。「停止下载」时调用，清除下载垃圾。
+   */
+  private fun deleteCachedApks() {
+    runCatching {
+      val resolver = appContext.contentResolver
+      val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        MediaStore.Downloads.EXTERNAL_CONTENT_URI
+      } else {
+        MediaStore.Files.getContentUri("external")
+      }
+      val projection = arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME)
+      val selection = "${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ?"
+      val selectionArgs = arrayOf("$APK_PREFIX%$APK_SUFFIX")
+      resolver.query(collection, projection, selection, selectionArgs, null)?.use { c ->
+        val idIdx = c.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+        while (c.moveToNext()) {
+          val id = c.getLong(idIdx)
+          resolver.delete(ContentUris.withAppendedId(collection, id), null, null)
+        }
+      }
+      // API < 29：公共 Downloads 目录里的真实文件可能不在 MediaStore 索引里，直接按文件名清理
+      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        dir.listFiles { f -> f.name.startsWith(APK_PREFIX) && f.name.endsWith(APK_SUFFIX) }
+          ?.forEach { it.delete() }
       }
     }
   }

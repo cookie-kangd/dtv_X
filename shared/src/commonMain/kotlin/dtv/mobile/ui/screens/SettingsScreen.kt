@@ -31,6 +31,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
@@ -199,10 +200,11 @@ private fun SettingsRoot(
  * ⚠️ 每次发新版时手动同步更新：把旧值换成「这次发版前的版本」，
  * 当前版本则由 UpdateManager 动态读取，无需维护。
  */
-private const val LAST_RELEASE_VERSION = "0.1.22"
+private const val LAST_RELEASE_VERSION = "0.1.23"
 private val LAST_RELEASE_NOTES = listOf(
-  "设置新增「关于」页：应用简介、功能一览、检查更新入口与上次更新卡片",
-  "修复退出 App 不彻底、重启手机后后台残留 dtv_mx 的问题（杜绝僵尸后台）",
+  "竖屏进直播间弹幕面板底部避让毛玻璃底栏，最新弹幕不再被遮挡",
+  "平台首页顶栏重构：移除订阅功能，新增板块下拉菜单，具体分类平铺展示并全局高亮",
+  "四个平台首页抽出共用 UI 组件 PlatformHomeContent，界面调整一处生效全平台",
 ).joinToString("\n") { "· $it" }
 
 @Composable
@@ -387,8 +389,26 @@ private fun UpdateCheckerCard(
             )
             is UpdateState.Downloading -> {
               val percent = (state.progress * 100).toInt()
-              UpdateStatusText(text = "正在下载新版本… $percent%")
-              UpdateProgressBar(progress = state.progress)
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+              ) {
+                Column(modifier = Modifier.weight(1f)) {
+                  UpdateStatusText(text = "正在下载新版本… $percent%")
+                  Spacer(modifier = Modifier.height(6.dp))
+                  UpdateProgressBar(progress = state.progress)
+                }
+                // 最右侧「停止下载」：取消所有下载并删除已缓存安装包
+                OutlinedButton(
+                  onClick = { updateManager.cancelDownload() },
+                  contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                ) {
+                  Icon(imageVector = Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text("停止下载")
+                }
+              }
             }
             is UpdateState.Downloaded -> {
               UpdateStatusText(text = "安装包已缓存到 Download 目录，点击即可安装", positive = true)

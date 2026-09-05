@@ -55,6 +55,9 @@ interface UpdateManager {
   val currentVersionName: String
   fun check()
   fun download(info: AppUpdateInfo, url: String = info.downloadUrl)
+
+  /** 停止下载：取消下载任务并删除已缓存的安装包（含未完成的下载残留）。 */
+  fun cancelDownload()
   fun install(fileUri: String)
   fun reset()
 }

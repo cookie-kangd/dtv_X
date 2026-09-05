@@ -67,7 +67,6 @@ class AppState(
   var currentScreen: Screen by mutableStateOf(Screen.Home)
   var currentStreamer: Streamer? by mutableStateOf(null)
   private var playerReturnScreen: Screen? by mutableStateOf(null)
-  private var searchReturnScreen: Screen? by mutableStateOf(null)
   private var settingsReturnScreen: Screen? by mutableStateOf(null)
   var playerFullscreen: Boolean by mutableStateOf(false)
   var currentPartition: SubscribedPartition? by mutableStateOf(null)
@@ -106,7 +105,7 @@ class AppState(
   }
 
   val dockSelectedScreen: Screen
-    get() = if (currentScreen == Screen.Search) searchReturnScreen ?: Screen.Home else currentScreen
+    get() = currentScreen
 
   private fun streamerKey(streamer: Streamer): String = "${streamer.platform.name}:${streamer.roomId}"
 
@@ -264,7 +263,7 @@ class AppState(
     }
     selectedPlatform = first
     currentPartition = null
-    if (currentScreen == Screen.Platform || currentScreen == Screen.Search) {
+    if (currentScreen == Screen.Platform) {
       currentScreen = Screen.Home
     }
   }
@@ -380,10 +379,6 @@ class AppState(
     // 骨架屏由各平台首页自身的 loading 状态驱动，无需此全局锁。
     selectedPlatform = platform
     currentPartition = null
-    if (currentScreen == Screen.Search) {
-      // keep current screen for better UX when switching tabs during search
-      return
-    }
     currentScreen = Screen.Platform
   }
 
@@ -393,11 +388,6 @@ class AppState(
     currentPartition = partition
     currentScreen = Screen.Player
     playerFullscreen = false
-  }
-
-  fun openSearch() {
-    searchReturnScreen = currentScreen
-    currentScreen = Screen.Search
   }
 
   fun openSettings() {
@@ -415,10 +405,6 @@ class AppState(
         currentStreamer = null
         playerFullscreen = false
       }
-      Screen.Search -> {
-        currentScreen = searchReturnScreen ?: Screen.Home
-        searchReturnScreen = null
-      }
       Screen.Settings -> {
         currentScreen = settingsReturnScreen ?: Screen.Home
         settingsReturnScreen = null
@@ -429,7 +415,7 @@ class AppState(
 
 enum class ThemeMode { System, Light, Dark }
 
-enum class Screen { Home, Platform, Player, Search, Settings }
+enum class Screen { Home, Platform, Player, Settings }
 
 @Composable
 fun rememberAppState(

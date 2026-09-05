@@ -154,6 +154,28 @@ fun StreamerCard(
             }
           }
         }
+
+        // 封面左上角关注徽标：点击直接关注/取关，无需进入直播间
+        if (onToggleFollow != null) {
+          Surface(
+            onClick = onToggleFollow,
+            modifier = Modifier
+              .align(Alignment.TopStart)
+              .padding(metrics.badgeInsetPadding),
+            shape = CircleShape,
+            color = Color.Black.copy(alpha = 0.40f),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp,
+          ) {
+            Icon(
+              imageVector = if (followed) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+              contentDescription = if (followed) "取消关注" else "关注",
+              tint = if (followed) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.9f),
+              modifier = Modifier.padding(6.dp).size(14.dp),
+            )
+          }
+        }
       }
 
       Column(

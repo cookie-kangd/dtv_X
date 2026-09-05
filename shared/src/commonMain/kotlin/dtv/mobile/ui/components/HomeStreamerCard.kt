@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -116,6 +118,28 @@ fun HomeStreamerCard(
             modifier = Modifier.padding(horizontal = if (compact) 5.dp else 8.dp, vertical = if (compact) 2.dp else 4.dp),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+          )
+        }
+      }
+
+      // 封面左上角关注徽标：首页卡片虽都是已关注主播，但可从卡片直接取消关注
+      if (onToggleFollow != null) {
+        Surface(
+          onClick = onToggleFollow,
+          modifier = Modifier
+            .align(Alignment.TopStart)
+            .padding(start = if (compact) 7.dp else 12.dp, top = if (compact) 7.dp else 12.dp),
+          shape = CircleShape,
+          color = Color.Black.copy(alpha = 0.40f),
+          border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.10f)),
+          tonalElevation = 0.dp,
+          shadowElevation = 0.dp,
+        ) {
+          Icon(
+            imageVector = if (followed) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+            contentDescription = if (followed) "取消关注" else "关注",
+            tint = if (followed) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.9f),
+            modifier = Modifier.padding(6.dp).size(14.dp),
           )
         }
       }

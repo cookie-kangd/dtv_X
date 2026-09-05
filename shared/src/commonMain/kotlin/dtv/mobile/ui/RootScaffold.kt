@@ -13,14 +13,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,7 +29,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -53,9 +49,9 @@ import dtv.mobile.state.CategoryMenuState
 import dtv.mobile.state.AppState
 import dtv.mobile.state.Screen
 import dtv.mobile.ui.screens.HomeScreen
+import dtv.mobile.ui.screens.PlatformInlineSearch
 import dtv.mobile.ui.screens.PlatformScreen
 import dtv.mobile.ui.screens.PlayerScreen
-import dtv.mobile.ui.screens.SearchScreen
 import dtv.mobile.ui.screens.SettingsScreen
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
@@ -127,21 +123,6 @@ fun RootScaffold(appState: AppState) {
     topBar = {
       when (appState.currentScreen) {
         Screen.Player -> Unit
-        Screen.Search -> {
-          CenterAlignedTopAppBar(
-            title = { Text(text = "搜索") },
-            navigationIcon = {
-              IconButton(onClick = { appState.back() }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-              }
-            },
-            actions = {},
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-              containerColor = Color.Transparent,
-              scrolledContainerColor = Color.Transparent,
-            ),
-          )
-        }
         Screen.Settings -> {
           // 设置页的标题与返回按钮由 SettingsScreen 自己渲染（根页大返回回首页，
           // 子页大返回回设置根页），顶栏不再叠加返回图标，避免出现两个返回。
@@ -150,7 +131,7 @@ fun RootScaffold(appState: AppState) {
         else -> {
           HubTopBar(
             title = if (appState.currentScreen == Screen.Home) "关注列表" else appState.selectedPlatform.title,
-            onSearchClick = appState::openSearch,
+            appState = appState,
             categoryMenu = appState.categoryMenu,
             showBilibiliLogin = appState.currentScreen == Screen.Platform && appState.selectedPlatform == Platform.Bilibili,
             bilibiliLoggedIn = bilibiliLoggedIn,
@@ -211,10 +192,6 @@ fun RootScaffold(appState: AppState) {
             appState = appState,
             streamer = appState.currentStreamer,
           )
-          Screen.Search -> SearchScreen(
-            modifier = Modifier,
-            appState = appState,
-          )
           Screen.Settings -> SettingsScreen(
             modifier = Modifier,
             appState = appState,
@@ -242,7 +219,7 @@ fun RootScaffold(appState: AppState) {
 @Composable
 private fun HubTopBar(
   title: String,
-  onSearchClick: () -> Unit,
+  appState: AppState,
   categoryMenu: CategoryMenuState?,
   showBilibiliLogin: Boolean,
   bilibiliLoggedIn: Boolean,
@@ -280,33 +257,11 @@ private fun HubTopBar(
       )
 
       if (showSearch) {
-        Surface(
-          modifier = Modifier
-            .weight(1f)
-            .height(44.dp)
-            .clip(RoundedCornerShape(999.dp))
-            .clickable { onSearchClick() },
-          color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
-          tonalElevation = 0.dp,
-          shadowElevation = 0.dp,
-          border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
-        ) {
-          Row(modifier = Modifier.padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(
-              imageVector = Icons.Default.Search,
-              contentDescription = "搜索",
-              tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-              modifier = Modifier.padding(top = 12.dp),
-            )
-            Text(
-              text = "搜索",
-              color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-              style = MaterialTheme.typography.bodyMedium,
-              modifier = Modifier.padding(top = 12.dp),
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-          }
-        }
+        // 内联搜索框：就地输入、下拉展示搜索结果，可进直播间/关注主播，不再跳搜索页
+        PlatformInlineSearch(
+          appState = appState,
+          modifier = Modifier.weight(1f),
+        )
       } else {
         Spacer(modifier = Modifier.weight(1f))
       }
@@ -331,18 +286,40 @@ private fun HubTopBar(
         }
         if (categoryMenu != null) {
           Box {
-            IconButton(onClick = { categoryMenuExpanded = !categoryMenuExpanded }) {
-              Icon(
-                imageVector = Icons.Default.ArrowDropDown,
-                contentDescription = "选择板块",
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-              )
+            // 按钮上直接显示当前选中的板块名 + 下拉图标
+            val menu = categoryMenu
+            val currentSection = menu.options.getOrNull(menu.selectedIndex).takeIf { menu.selectedIndex >= 0 }
+            Surface(
+              onClick = { categoryMenuExpanded = !categoryMenuExpanded },
+              shape = RoundedCornerShape(999.dp),
+              color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+              tonalElevation = 0.dp,
+              shadowElevation = 0.dp,
+              border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
+            ) {
+              Row(
+                modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+              ) {
+                Text(
+                  text = currentSection ?: "板块",
+                  style = MaterialTheme.typography.labelLarge,
+                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                  maxLines = 1,
+                )
+                Icon(
+                  imageVector = Icons.Default.ArrowDropDown,
+                  contentDescription = "选择板块",
+                  tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                  modifier = Modifier.size(20.dp),
+                )
+              }
             }
             DropdownMenu(
               expanded = categoryMenuExpanded,
               onDismissRequest = { categoryMenuExpanded = false },
             ) {
-              val menu = categoryMenu
               menu?.options?.forEachIndexed { index, option ->
                 DropdownMenuItem(
                   text = {
