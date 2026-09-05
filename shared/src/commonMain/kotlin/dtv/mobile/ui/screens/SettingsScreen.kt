@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -370,27 +371,22 @@ private fun UpdateAvailableBlock(
       maxLines = 6,
     )
   }
-  // 下载来源按钮：第一个是 github 原始地址（通栏主按钮），其余是 gh-proxy.org 系列
-  // 加速镜像转换后的地址（紧凑流式排列）。逐源下载，走同一套下载/安装流程，
+  // 下载来源按钮：github 原始地址 + gh-proxy.org 系列加速镜像，全部等宽等色、
+  // 并排流式排列（一行放不下自动换行）。逐源下载，走同一套下载/安装流程，
   // 任意一个失败可换另一个。
   val sources = info.downloadSources.ifEmpty {
     listOf(dtv.mobile.update.DownloadSource("github", info.downloadUrl))
-  }
-  Button(
-    onClick = { onDownload(sources.first().url) },
-    modifier = Modifier.fillMaxWidth(),
-  ) {
-    Icon(imageVector = Icons.Default.Download, contentDescription = null)
-    Spacer(modifier = Modifier.width(6.dp))
-    Text(sources.first().label)
   }
   FlowRow(
     horizontalArrangement = Arrangement.spacedBy(8.dp),
     verticalArrangement = Arrangement.spacedBy(8.dp),
   ) {
-    sources.drop(1).forEach { source ->
-      OutlinedButton(onClick = { onDownload(source.url) }) {
-        Text(source.label)
+    sources.forEach { source ->
+      OutlinedButton(
+        onClick = { onDownload(source.url) },
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+      ) {
+        Text(source.label + if (source.recommended) "(推荐)" else "", maxLines = 1)
       }
     }
   }

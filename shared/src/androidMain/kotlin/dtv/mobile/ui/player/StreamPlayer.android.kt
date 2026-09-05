@@ -99,7 +99,6 @@ private fun buildPlayer(
   url: String,
   liveMode: Boolean,
   quality: VideoQuality,
-  backgroundAudio: Boolean,
 ): ExoPlayer {
   val headers = buildMap {
     put(
@@ -150,15 +149,16 @@ private fun buildPlayer(
 
   // 画质档位决定允许选择的视频轨分辨率上限。
   // 「最高」档不再限制 1080p：解除分辨率上限并强制取流中最高码率，优先保证画面清晰。
-  // 熄屏听播（backgroundAudio）时在建播放器时就关闭视频轨：
-  // 起播即纯音频、无「先出画面再关」闪烁；且避免运行期切换视频轨导致
-  // 部分机型/直播流恢复视频后渲染器卡死（表现为恢复画面后过一会定格，音频/弹幕正常）。
+  // 注意：绝不在此处按听播状态关闭视频轨，也绝不在运行期切换轨道——
+  // 任何形式的重建/切轨都会重新请求直播流地址，斗鱼等平台的直链带一次性
+  // 签名 token 且 CDN 对并发连接敏感，第二次连接会被拒绝或限流
+  // （表现为开启听播无限加载/黑屏无声音，关闭后画面过一会卡死）。
+  // 听播只做「摘掉/挂回画面」，见下方 update 逻辑。
   val trackSelector = DefaultTrackSelector(context).apply {
     setParameters(
       buildUponParameters()
         .setMaxVideoSize(quality.maxWidth, quality.maxHeight)
         .setForceHighestSupportedBitrate(quality.forceHighestSupportedBitrate)
-        .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, backgroundAudio)
         .build(),
     )
   }
@@ -193,30 +193,23 @@ actual fun StreamPlayer(
   // 兜底：构建播放器的任何一步失败都不允许把 App 带崩，
   // 失败时降级为"零可选配置"的最简播放器继续起播。
   // 画质档位变化时重建播放器，使新的分辨率/码率策略立即生效。
-  // 熄屏听播开关变化也重建播放器：视频轨的开关在建播放器时一次性定死，
-  // 不做运行期 track 切换，彻底规避「恢复画面后视频渲染器卡死」的问题
-  // （代价是每次开关听播重连一次直播流，约 1-2 秒）。
-  val player = remember(url, quality, backgroundAudio) {
+  //
+  // 听播（backgroundAudio）不参与 remember key：开关听播绝不重建播放器。
+  // 直播直链（尤其斗鱼）带一次性签名 token，CDN 对同一 token 的并发/二次
+  // 连接敏感，重建=重新请求同一地址 → 被拒或限流（无限加载/黑屏/画面卡死）。
+  // 听播只摘掉/挂回视频画面，播放器实例与网络连接完全不动。
+  val player = remember(url, quality) {
     runCatching {
       buildPlayer(
         context = context,
         url = url,
         liveMode = liveMode,
         quality = quality,
-        backgroundAudio = backgroundAudio,
       )
     }
       .getOrElse { t ->
         AppLog.e("DTV-Player", "build player failed, fallback to minimal player: url=$url", t)
         ExoPlayer.Builder(context).build().apply {
-          if (backgroundAudio) {
-            runCatching {
-              trackSelectionParameters = trackSelectionParameters
-                .buildUpon()
-                .setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true)
-                .build()
-            }
-          }
           setMediaItem(MediaItem.fromUri(Uri.parse(url)))
           playWhenReady = true
           prepare()
@@ -224,8 +217,8 @@ actual fun StreamPlayer(
       }
   }
 
-  // 「熄屏听播」：前台服务保活（视频轨的开/关已在建播放器时定死，这里只管保活与释放）。
-  // 开关切换或离开播放页时释放保活。
+  // 「熄屏听播」：前台服务保活。视频画面的摘除/挂回在下方 AndroidView 中完成，
+  // 这里只负责服务生命周期。
   DisposableEffect(player, backgroundAudio) {
     if (backgroundAudio) {
       BackgroundAudioController.acquire(context)
@@ -319,11 +312,15 @@ actual fun StreamPlayer(
     }
   }
 
-  // key(player)：播放器重建（开关听播/换画质/换线路）时，把 PlayerView 与其内部
-  // SurfaceView 一并换新。SurfaceView 的 surface 被旧播放器用过之后，在部分机型上
-  // 复用给新播放器会出现「视频渲染器卡死、画面定格」（音频/弹幕正常）；
-  // 全新 view 拿到全新 surface，从根上消除复用隐患。旧 view 卸载时 onRelease
-  // 会先摘除旧播放器引用，旧播放器由上面的 DisposableEffect 负责释放。
+  // key(player)：播放器重建（换画质/换线路）时，把 PlayerView 与其内部
+  // SurfaceView 一并换新，避免旧 surface 复用带来的渲染隐患。
+  //
+  // 听播的「纯音频」通过 update 里的 clearVideoSurface 实现：
+  // - 开启听播 → view.player 置 null 并 clearVideoSurface()，视频解码停止出画面，
+  //   音频/网络连接完全不受影响（不重连、不切轨、不重建）；
+  // - 关闭听播 → view.player 重新挂回，ExoPlayer 用全新 surface 恢复视频渲染。
+  // 这是 ExoPlayer 官方的后台播放姿势，对所有平台/流一致，不存在斗鱼直链
+  // 二次请求被 CDN 拒绝的问题。
   key(player) {
     AndroidView(
       modifier = modifier,
@@ -351,13 +348,22 @@ actual fun StreamPlayer(
         view.resizeMode = if (zoomToFill) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else AspectRatioFrameLayout.RESIZE_MODE_FIT
         view.useController = false
         view.controllerAutoShow = false
-        view.keepScreenOn = true
-        if (view.player !== player) {
-          view.player = player
+        // 听播时允许熄屏（画面已摘除，屏幕常亮毫无意义）
+        view.keepScreenOn = !backgroundAudio
+        val target: Player? = if (backgroundAudio) null else player
+        if (view.player !== target) {
+          view.player = target
+          if (target == null) {
+            // 显式清掉播放器上的输出 surface：视频解码停止出画面，
+            // 音频与网络连接保持原样（不重连直播流）。
+            runCatching { player.clearVideoSurface() }
+          }
         }
-        view.post {
-          view.requestLayout()
-          view.invalidate()
+        if (target != null) {
+          view.post {
+            view.requestLayout()
+            view.invalidate()
+          }
         }
       },
     )
