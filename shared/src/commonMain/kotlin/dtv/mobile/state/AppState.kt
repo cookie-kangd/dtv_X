@@ -23,6 +23,18 @@ data class SubscribedPartition(
 /** 会占用底部切换栏入口的平台（「自定义」不占底部栏），默认顺序即枚举声明顺序。 */
 private val DOCK_PLATFORMS: List<Platform> = Platform.entries.filter { it != Platform.Custom }
 
+/**
+ * 平台板块页顶栏右侧「板块下拉菜单」的状态快照：
+ * @param options    一级分区名称列表（如：网游竞技 / 单机热游 / 手游休闲…）
+ * @param selectedIndex 当前选中项下标，-1 表示未选中
+ * @param onSelect   选中某个一级分区（下标）后的回调，由板块页内部切换 cate1/cate2
+ */
+data class CategoryMenuState(
+  val options: List<String>,
+  val selectedIndex: Int,
+  val onSelect: (Int) -> Unit,
+)
+
 class AppState(
   val repo: DtvRepository,
   private val subscriptionStore: SubscriptionStore,
@@ -59,6 +71,9 @@ class AppState(
   private var settingsReturnScreen: Screen? by mutableStateOf(null)
   var playerFullscreen: Boolean by mutableStateOf(false)
   var currentPartition: SubscribedPartition? by mutableStateOf(null)
+
+  /** 顶栏右侧「板块下拉菜单」状态，由当前平台页在组合期间写入，HubTopBar 读取渲染。 */
+  var categoryMenu: CategoryMenuState? by mutableStateOf(null)
 
   val followedStreamers = mutableStateListOf<Streamer>()
   val subscribedPartitions = mutableStateListOf<SubscribedPartition>()
@@ -291,22 +306,6 @@ class AppState(
   }
 
   private fun partitionKey(p: SubscribedPartition): String = "${p.platform?.name ?: "any"}:${p.id}"
-
-  fun isPartitionSubscribed(p: SubscribedPartition): Boolean {
-    val key = partitionKey(p)
-    return subscribedPartitions.any { partitionKey(it) == key }
-  }
-
-  fun togglePartition(p: SubscribedPartition) {
-    val key = partitionKey(p)
-    val index = subscribedPartitions.indexOfFirst { partitionKey(it) == key }
-    if (index >= 0) {
-      subscribedPartitions.removeAt(index)
-    } else {
-      subscribedPartitions.add(p)
-    }
-    subscriptionStore.saveSubscribedPartitions(subscribedPartitions.toList())
-  }
 
   private fun normalizeDanmuBlockKeywords(keywords: List<String>): List<String> {
     val seen = HashSet<String>()

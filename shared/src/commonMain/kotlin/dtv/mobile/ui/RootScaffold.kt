@@ -16,13 +16,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,7 +49,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dtv.mobile.model.Platform
-import dtv.mobile.state.SubscribedPartition
+import dtv.mobile.state.CategoryMenuState
 import dtv.mobile.state.AppState
 import dtv.mobile.state.Screen
 import dtv.mobile.ui.screens.HomeScreen
@@ -150,9 +151,7 @@ fun RootScaffold(appState: AppState) {
           HubTopBar(
             title = if (appState.currentScreen == Screen.Home) "关注列表" else appState.selectedPlatform.title,
             onSearchClick = appState::openSearch,
-            currentPartition = appState.currentPartition,
-            isPartitionSubscribed = appState::isPartitionSubscribed,
-            onToggleSubscription = { appState.currentPartition?.let { appState.togglePartition(it) } },
+            categoryMenu = appState.categoryMenu,
             showBilibiliLogin = appState.currentScreen == Screen.Platform && appState.selectedPlatform == Platform.Bilibili,
             bilibiliLoggedIn = bilibiliLoggedIn,
             onBilibiliLoginClick = { showBilibiliLoginSheet = true },
@@ -244,9 +243,7 @@ fun RootScaffold(appState: AppState) {
 private fun HubTopBar(
   title: String,
   onSearchClick: () -> Unit,
-  currentPartition: SubscribedPartition?,
-  isPartitionSubscribed: (SubscribedPartition) -> Boolean,
-  onToggleSubscription: () -> Unit,
+  categoryMenu: CategoryMenuState?,
   showBilibiliLogin: Boolean,
   bilibiliLoggedIn: Boolean,
   onBilibiliLoginClick: () -> Unit,
@@ -260,6 +257,7 @@ private fun HubTopBar(
   onSettingsClick: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
+  var categoryMenuExpanded by remember { mutableStateOf(false) }
   Surface(
     modifier = modifier.statusBarsPadding(),
     color = Color.Transparent,
@@ -314,7 +312,7 @@ private fun HubTopBar(
       }
 
       // 数据同步与主题模式入口已迁移到「设置」页；
-      // 顶栏仅保留平台页专属操作（B站登录 / 订阅）与首页的设置入口。
+      // 顶栏保留平台页专属操作：B站登录 + 板块下拉菜单（原第二列一级分区）。
       if (showPlatformActions) {
         if (showBilibiliLogin) {
           IconButton(
@@ -331,11 +329,40 @@ private fun HubTopBar(
             )
           }
         }
-        if (currentPartition != null) {
-          SubscriptionTopButton(
-            subscribed = isPartitionSubscribed(currentPartition),
-            onToggle = onToggleSubscription,
-          )
+        if (categoryMenu != null) {
+          Box {
+            IconButton(onClick = { categoryMenuExpanded = !categoryMenuExpanded }) {
+              Icon(
+                imageVector = Icons.Default.ArrowDropDown,
+                contentDescription = "选择板块",
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+              )
+            }
+            DropdownMenu(
+              expanded = categoryMenuExpanded,
+              onDismissRequest = { categoryMenuExpanded = false },
+            ) {
+              val menu = categoryMenu
+              menu?.options?.forEachIndexed { index, option ->
+                DropdownMenuItem(
+                  text = {
+                    Text(
+                      text = option,
+                      color = if (index == menu.selectedIndex) {
+                        MaterialTheme.colorScheme.primary
+                      } else {
+                        MaterialTheme.colorScheme.onSurface
+                      },
+                    )
+                  },
+                  onClick = {
+                    categoryMenuExpanded = false
+                    menu.onSelect(index)
+                  },
+                )
+              }
+            }
+          }
         }
       }
 
@@ -386,27 +413,5 @@ private fun HubTopBar(
         }
       }
     }
-  }
-}
-
-@Composable
-private fun SubscriptionTopButton(
-  subscribed: Boolean,
-  onToggle: () -> Unit,
-  modifier: Modifier = Modifier,
-) {
-  FilledTonalButton(
-    onClick = onToggle,
-    modifier = modifier.height(36.dp),
-    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-  ) {
-    Icon(
-      imageVector = Icons.Default.Star,
-      contentDescription = null,
-      tint = if (subscribed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-      modifier = Modifier.size(18.dp),
-    )
-    Spacer(modifier = Modifier.width(4.dp))
-    Text(text = if (subscribed) "已订阅" else "订阅", style = MaterialTheme.typography.labelMedium)
   }
 }

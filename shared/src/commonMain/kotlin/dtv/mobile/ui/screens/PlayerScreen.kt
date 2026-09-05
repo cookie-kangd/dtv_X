@@ -95,6 +95,7 @@ import dtv.mobile.repo.DtvRepository
 import dtv.mobile.state.AppState
 import dtv.mobile.state.VideoQuality
 import dtv.mobile.theme.DtvColors
+import dtv.mobile.ui.DockContentClearance
 import dtv.mobile.ui.components.NetworkImage
 import dtv.mobile.ui.player.PictureInPicture
 import dtv.mobile.ui.player.StreamPlayer
@@ -901,7 +902,13 @@ fun PlayerScreen(
               modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(top = 12.dp, bottom = 0.dp),
+                .padding(top = 12.dp)
+                // 竖屏时毛玻璃浮岛底栏悬浮在内容之上：弹幕列表底部预留出
+                // 导航条 + 浮岛的高度，避免最新弹幕被底栏遮住看不清。
+                .padding(
+                  bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
+                    DockContentClearance,
+                ),
             )
           }
         }

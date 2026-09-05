@@ -1,61 +1,25 @@
 package dtv.mobile.ui.screens.douyin
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import dtv.mobile.model.Streamer
 import dtv.mobile.model.Platform
+import dtv.mobile.model.Streamer
 import dtv.mobile.repo.DouyinCate1
 import dtv.mobile.repo.DouyinCate2
 import dtv.mobile.repo.PagedResult
 import dtv.mobile.state.AppState
+import dtv.mobile.state.CategoryMenuState
 import dtv.mobile.state.SubscribedPartition
-import dtv.mobile.ui.components.LocalCardMetrics
-import dtv.mobile.ui.components.CategoryPill
-import dtv.mobile.ui.components.LazyGridLoadMoreEffect
-import dtv.mobile.ui.components.PullToRefreshBox
-import dtv.mobile.ui.components.StreamerCard
-import dtv.mobile.ui.components.StreamerCardSkeleton
-import dtv.mobile.ui.DockContentClearance
-import kotlinx.coroutines.launch
+import dtv.mobile.ui.screens.HomePillItem
+import dtv.mobile.ui.screens.PlatformHomeContent
 import kotlin.random.Random
 
 private const val PAGE_SIZE = 15
@@ -67,7 +31,6 @@ private fun generateMsToken(length: Int = 107): String {
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DouyinHomeScreen(
   appState: AppState,
@@ -76,7 +39,6 @@ fun DouyinHomeScreen(
   var categories: List<DouyinCate1> by remember { mutableStateOf(emptyList()) }
   var selectedCate1: DouyinCate1? by remember { mutableStateOf(null) }
   var selectedCate2: DouyinCate2? by remember { mutableStateOf(null) }
-  var showCate2Sheet by remember { mutableStateOf(false) }
 
   var rooms by remember { mutableStateOf<List<Streamer>>(emptyList()) }
   var loading by remember { mutableStateOf(true) }
@@ -84,11 +46,25 @@ fun DouyinHomeScreen(
   var hasMore by remember { mutableStateOf(true) }
   var offset by remember { mutableIntStateOf(0) }
   var msToken by remember { mutableStateOf(generateMsToken()) }
-  var refreshing by remember { mutableStateOf(false) }
 
   val gridState = rememberLazyGridState()
-  val cardMetrics = LocalCardMetrics.current
-  val scope = rememberCoroutineScope()
+
+  // 顶栏「板块下拉菜单」：把一级分区列表交给 RootScaffold 的 HubTopBar 渲染，
+  // 选中后切到对应板块并自动选中其第一个分类。
+  DisposableEffect(categories, selectedCate1) {
+    if (categories.isNotEmpty() && appState.selectedPlatform == Platform.Douyin) {
+      appState.categoryMenu = CategoryMenuState(
+        options = categories.map { it.name },
+        selectedIndex = categories.indexOfFirst { it.name == selectedCate1?.name },
+        onSelect = { index ->
+          val c1 = categories.getOrNull(index) ?: return@CategoryMenuState
+          selectedCate1 = c1
+          selectedCate2 = c1.cate2List.firstOrNull()
+        },
+      )
+    }
+    onDispose { }
+  }
 
   suspend fun loadPage(reset: Boolean) {
     val cate2 = selectedCate2 ?: return
@@ -179,161 +155,33 @@ fun DouyinHomeScreen(
     gridState.scrollToItem(0)
   }
 
-  LazyGridLoadMoreEffect(
+  val cate2Pills = selectedCate1?.cate2List.orEmpty()
+  val currentPartition: SubscribedPartition? = selectedCate2?.let {
+    SubscribedPartition(
+      id = "douyin:${it.partitionType}:${it.partition}",
+      name = it.name,
+      platform = Platform.Douyin,
+    )
+  }
+
+  PlatformHomeContent(
+    appState = appState,
+    currentPartition = currentPartition,
+    pills = cate2Pills.map { HomePillItem(key = "${it.partitionType}:${it.partition}", label = it.name) },
+    selectedPillKey = selectedCate2?.let { "${it.partitionType}:${it.partition}" },
+    onPillClick = { index -> selectedCate2 = cate2Pills.getOrNull(index) },
+    rooms = rooms,
+    loading = loading,
+    loadingMore = loadingMore,
+    hasMore = hasMore,
     gridState = gridState,
-    enabled = !loading && !loadingMore && hasMore,
-    itemCount = rooms.size,
-  ) {
-    loadPage(reset = false)
-  }
-
-  if (showCate2Sheet) {
-    ModalBottomSheet(onDismissRequest = { showCate2Sheet = false }) {
-      val list = selectedCate1?.cate2List.orEmpty()
-      LazyColumn(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 16.dp, vertical = 8.dp),
-        contentPadding = PaddingValues(bottom = 24.dp),
-      ) {
-        item {
-          Text("选择分类", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 10.dp))
-        }
-        items(list, key = { "${it.partitionType}:${it.partition}" }) { c2 ->
-          val selected = c2.partition == selectedCate2?.partition && c2.partitionType == selectedCate2?.partitionType
-          TextButton(
-            onClick = {
-              selectedCate2 = c2
-              showCate2Sheet = false
-            },
-            modifier = Modifier.fillMaxWidth(),
-          ) {
-            Text(text = c2.name, color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
-          }
-        }
-      }
-    }
-  }
-
-  PullToRefreshBox(
-    refreshing = refreshing,
     onRefresh = {
-      if (refreshing || loading) return@PullToRefreshBox
-      scope.launch {
-        refreshing = true
-        runCatching {
-          loadPage(reset = true)
-          gridState.scrollToItem(0)
-        }
-        refreshing = false
+      if (!loading) {
+        loadPage(reset = true)
+        gridState.scrollToItem(0)
       }
     },
-    modifier = modifier.fillMaxSize(),
-  ) {
-    Column(modifier = Modifier.fillMaxSize().padding(start = 14.dp, end = 14.dp, top = 6.dp)) {
-      LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        items(categories, key = { it.name }) { c1 ->
-          CategoryPill(
-            label = c1.name,
-            selected = c1.name == selectedCate1?.name,
-            onClick = {
-              selectedCate1 = c1
-              selectedCate2 = c1.cate2List.firstOrNull()
-            },
-          )
-        }
-      }
-
-      Spacer(modifier = Modifier.height(6.dp))
-      val currentPartition: SubscribedPartition? = selectedCate2?.let {
-        SubscribedPartition(
-          id = "douyin:${it.partitionType}:${it.partition}",
-          name = it.name,
-          platform = Platform.Douyin,
-        )
-      }
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-      ) {
-        Row(
-          verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-          horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-          Text(
-            text = "当前:",
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-          )
-          Text(
-            text = selectedCate2?.name ?: "选择分类",
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
-            maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            modifier = Modifier
-              .clickable(enabled = selectedCate1 != null) { showCate2Sheet = true },
-          )
-          IconButton(onClick = { if (selectedCate1 != null) showCate2Sheet = true }) {
-            Icon(imageVector = Icons.Default.MoreHoriz, contentDescription = "更多分类")
-          }
-        }
-
-      }
-      Spacer(modifier = Modifier.height(8.dp))
-
-      LazyVerticalGrid(
-        modifier = Modifier.fillMaxSize(),
-        state = gridState,
-        columns = GridCells.Fixed(cardMetrics.columns),
-        contentPadding = PaddingValues(
-          bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
-            DockContentClearance,
-        ),
-        verticalArrangement = Arrangement.spacedBy(cardMetrics.gridSpacing),
-        horizontalArrangement = Arrangement.spacedBy(cardMetrics.gridSpacing),
-      ) {
-        if (loading || appState.platformSwitchLoading) {
-          items(6, span = { GridItemSpan(1) }) {
-            StreamerCardSkeleton()
-          }
-        } else {
-          items(rooms.size, key = { rooms[it].roomId }, span = { GridItemSpan(1) }, contentType = { "streamer" }) { index ->
-            val streamer = rooms[index]
-            StreamerCard(
-              streamer = streamer,
-              followed = appState.isFollowed(streamer),
-              onClick = { appState.openPlayer(streamer, partition = currentPartition) },
-              onToggleFollow = { appState.toggleFollow(streamer) },
-            )
-          }
-
-          item(span = { GridItemSpan(cardMetrics.columns) }) {
-            // 底部提示单独占满一整行并居中；没有更多数据时不再显示任何提示
-            Box(
-              modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 10.dp),
-              contentAlignment = Alignment.Center,
-            ) {
-              when {
-                loadingMore -> Text("加载更多…", style = MaterialTheme.typography.bodyMedium)
-                hasMore -> Text(
-                  "继续滑动加载更多",
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-                )
-                else -> Text(
-                  "无更多直播间",
-                  style = MaterialTheme.typography.bodyMedium,
-                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                )
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+    onLoadMore = { loadPage(reset = false) },
+    modifier = modifier,
+  )
 }

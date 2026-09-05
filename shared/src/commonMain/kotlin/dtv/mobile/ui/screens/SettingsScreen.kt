@@ -199,10 +199,10 @@ private fun SettingsRoot(
  * ⚠️ 每次发新版时手动同步更新：把旧值换成「这次发版前的版本」，
  * 当前版本则由 UpdateManager 动态读取，无需维护。
  */
-private const val LAST_RELEASE_VERSION = "0.1.21"
+private const val LAST_RELEASE_VERSION = "0.1.22"
 private val LAST_RELEASE_NOTES = listOf(
-  "斗鱼听播问题根治：开关听播不再重建播放器，仅摘除/挂回视频画面，即时生效零重连",
-  "检查更新的下载按钮改为等大等色、并排排列（github 原始地址 + gh-proxy.org 系列加速镜像）",
+  "设置新增「关于」页：应用简介、功能一览、检查更新入口与上次更新卡片",
+  "修复退出 App 不彻底、重启手机后后台残留 dtv_mx 的问题（杜绝僵尸后台）",
 ).joinToString("\n") { "· $it" }
 
 @Composable
