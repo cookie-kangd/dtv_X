@@ -302,15 +302,11 @@ class AndroidUpdateManager(
     }
   }
 
-  /** 组装下载来源：第一个是原始 GitHub 地址，其余是加速镜像转换后的地址（推荐标记透传给按钮）。 */
+  /** 组装下载来源：第一个是 github 原始地址，其余是 gh-proxy.org 系列加速镜像转换后的地址。 */
   private fun buildDownloadSources(rawUrl: String): List<DownloadSource> {
-    val original = DownloadSource("原始地址下载", rawUrl)
+    val original = DownloadSource("github", rawUrl)
     val proxied = PROXY_MIRRORS.map { m ->
-      DownloadSource(
-        label = m.host,
-        url = m.base + rawUrl,
-        recommended = m.recommended,
-      )
+      DownloadSource(label = m.label, url = m.base + rawUrl)
     }
     return listOf(original) + proxied
   }

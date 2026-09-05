@@ -319,6 +319,7 @@ private fun UpdateProgressBar(progress: Float) {
   }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun UpdateAvailableBlock(
   info: AppUpdateInfo,
@@ -361,20 +362,27 @@ private fun UpdateAvailableBlock(
       maxLines = 6,
     )
   }
-  // 下载来源按钮：第一个是原始地址，其余是 gh-proxy 等加速镜像转换后的地址；
-  // 镜像带推荐标记时按钮追加 (推荐)。逐源下载，走同一套下载/安装流程。
-  Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-    val sources = info.downloadSources.ifEmpty {
-      listOf(dtv.mobile.update.DownloadSource("原始地址下载", info.downloadUrl))
-    }
-    sources.forEach { source ->
-      Button(
-        onClick = { onDownload(source.url) },
-        modifier = Modifier.fillMaxWidth(),
-      ) {
-        Icon(imageVector = Icons.Default.Download, contentDescription = null)
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(source.label + if (source.recommended) " (推荐)" else "")
+  // 下载来源按钮：第一个是 github 原始地址（通栏主按钮），其余是 gh-proxy.org 系列
+  // 加速镜像转换后的地址（紧凑流式排列）。逐源下载，走同一套下载/安装流程，
+  // 任意一个失败可换另一个。
+  val sources = info.downloadSources.ifEmpty {
+    listOf(dtv.mobile.update.DownloadSource("github", info.downloadUrl))
+  }
+  Button(
+    onClick = { onDownload(sources.first().url) },
+    modifier = Modifier.fillMaxWidth(),
+  ) {
+    Icon(imageVector = Icons.Default.Download, contentDescription = null)
+    Spacer(modifier = Modifier.width(6.dp))
+    Text(sources.first().label)
+  }
+  FlowRow(
+    horizontalArrangement = Arrangement.spacedBy(8.dp),
+    verticalArrangement = Arrangement.spacedBy(8.dp),
+  ) {
+    sources.drop(1).forEach { source ->
+      OutlinedButton(onClick = { onDownload(source.url) }) {
+        Text(source.label)
       }
     }
   }

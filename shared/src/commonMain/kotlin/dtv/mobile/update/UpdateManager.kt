@@ -13,16 +13,18 @@ data class DownloadSource(
   val recommended: Boolean = false,
 )
 
-/** 加速镜像前缀。把原始 GitHub 下载地址拼到 [DownloadSource.url] 后即可走代理加速拉取。 */
+/** 加速镜像前缀。把原始 GitHub 下载地址拼到 [ProxyMirror.base] 后即可走代理加速拉取。 */
 internal val PROXY_MIRRORS: List<ProxyMirror> = listOf(
-  ProxyMirror("gh-proxy.com", "https://gh-proxy.com/", recommended = true),
-  ProxyMirror("ghproxy.net", "https://ghproxy.net/", recommended = false),
+  ProxyMirror("cloudflare", "https://gh-proxy.org/"),
+  ProxyMirror("Cloudflare (v4推荐)", "https://v4.gh-proxy.org/"),
+  ProxyMirror("Cloudflare (v4/v6)", "https://v6.gh-proxy.org/"),
+  ProxyMirror("Fastly (v4)", "https://cdn.gh-proxy.org/"),
+  ProxyMirror("AxisNow (v4)", "https://axisnow.gh-proxy.org/"),
 )
 
 internal data class ProxyMirror(
-  val host: String,
+  val label: String,
   val base: String,
-  val recommended: Boolean,
 )
 
 /** GitHub Release 中解析出的新版本信息 */
