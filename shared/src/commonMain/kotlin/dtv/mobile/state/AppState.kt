@@ -377,8 +377,17 @@ class AppState(
     // 子分类为空（selectedCate2 为 null 提前返回），锁会永远停在 true，
     // 导致底部栏彻底卡死、再也无法切换平台。
     // 骨架屏由各平台首页自身的 loading 状态驱动，无需此全局锁。
+    val wasInPlayer = currentScreen == Screen.Player
     selectedPlatform = platform
     currentPartition = null
+    if (wasInPlayer) {
+      // 看直播时直接切平台：立即清掉播放页残留状态。
+      // ExoPlayer 本体会随播放页组合销毁被 stop()/release() 释放（StreamPlayer
+      // 的 DisposableEffect 兜底），这里负责把 AppState 侧的引用一并清干净，
+      // 避免旧直播间信息/全屏状态跨平台残留占用内存或误导后续返回逻辑。
+      playerReturnScreen = null
+      playerFullscreen = false
+    }
     currentScreen = Screen.Platform
   }
 

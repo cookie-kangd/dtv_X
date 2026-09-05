@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -100,25 +101,34 @@ fun HomeStreamerCard(
         }
       }
 
+      // 右上角人气徽标与左上角关注徽标：同高、同内边距、同圆角，视觉上下对齐
+      val badgeH = if (compact) 22.dp else 26.dp
       if (streamer.viewerText.isNotBlank()) {
         Surface(
           modifier = Modifier
             .align(Alignment.TopEnd)
-            .padding(end = if (compact) 7.dp else 12.dp, top = if (compact) 7.dp else 12.dp),
+            .padding(end = if (compact) 7.dp else 12.dp, top = if (compact) 7.dp else 12.dp)
+            .height(badgeH),
           shape = RoundedCornerShape(metrics.badgeCorner),
           color = Color.Black.copy(alpha = 0.40f),
           border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.10f)),
           tonalElevation = 0.dp,
           shadowElevation = 0.dp,
         ) {
-          Text(
-            text = formatViewerCountWanIfNeeded(streamer.viewerText),
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black, fontSize = metrics.viewerSize),
-            color = Color.White,
-            modifier = Modifier.padding(horizontal = if (compact) 5.dp else 8.dp, vertical = if (compact) 2.dp else 4.dp),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-          )
+          Box(
+            modifier = Modifier
+              .fillMaxHeight()
+              .padding(horizontal = if (compact) 6.dp else 9.dp),
+            contentAlignment = Alignment.Center,
+          ) {
+            Text(
+              text = formatViewerCountWanIfNeeded(streamer.viewerText),
+              style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black, fontSize = metrics.viewerSize),
+              color = Color.White,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis,
+            )
+          }
         }
       }
 
@@ -128,19 +138,22 @@ fun HomeStreamerCard(
           onClick = onToggleFollow,
           modifier = Modifier
             .align(Alignment.TopStart)
-            .padding(start = if (compact) 7.dp else 12.dp, top = if (compact) 7.dp else 12.dp),
-          shape = CircleShape,
+            .padding(start = if (compact) 7.dp else 12.dp, top = if (compact) 7.dp else 12.dp)
+            .size(badgeH),
+          shape = RoundedCornerShape(metrics.badgeCorner),
           color = Color.Black.copy(alpha = 0.40f),
           border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.10f)),
           tonalElevation = 0.dp,
           shadowElevation = 0.dp,
         ) {
-          Icon(
-            imageVector = if (followed) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-            contentDescription = if (followed) "取消关注" else "关注",
-            tint = if (followed) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.9f),
-            modifier = Modifier.padding(6.dp).size(14.dp),
-          )
+          Box(contentAlignment = Alignment.Center) {
+            Icon(
+              imageVector = if (followed) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+              contentDescription = if (followed) "取消关注" else "关注",
+              tint = if (followed) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.9f),
+              modifier = Modifier.size(14.dp),
+            )
+          }
         }
       }
     }

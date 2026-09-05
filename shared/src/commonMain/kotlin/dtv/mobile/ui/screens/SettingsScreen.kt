@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Devices
@@ -40,6 +41,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -55,6 +57,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -72,6 +75,7 @@ import androidx.compose.ui.zIndex
 import dtv.mobile.model.Platform
 import dtv.mobile.state.AppState
 import dtv.mobile.ui.DockContentClearance
+import dtv.mobile.ui.components.BilibiliWebLoginSheet
 import dtv.mobile.state.ThemeMode
 import dtv.mobile.state.VideoQuality
 import dtv.mobile.ui.system.PlatformBackHandler
@@ -80,8 +84,9 @@ import dtv.mobile.update.UpdateState
 import dtv.mobile.update.rememberUpdateManager
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-private enum class SettingsSection { Root, Basic, Sync, Platform, About }
+private enum class SettingsSection { Root, Basic, Sync, Platform, PlatformLogin, About }
 
 private val PresetAccentColors = listOf(
   "青柠" to "#A3E635",
@@ -124,6 +129,7 @@ fun SettingsScreen(
         onOpenBasic = { section = SettingsSection.Basic },
         onOpenSync = { section = SettingsSection.Sync },
         onOpenPlatform = { section = SettingsSection.Platform },
+        onOpenPlatformLogin = { section = SettingsSection.PlatformLogin },
         onOpenAbout = { section = SettingsSection.About },
         modifier = Modifier.fillMaxSize(),
       )
@@ -142,6 +148,11 @@ fun SettingsScreen(
         onBack = { section = SettingsSection.Root },
         modifier = Modifier.fillMaxSize(),
       )
+      SettingsSection.PlatformLogin -> PlatformLoginSection(
+        appState = appState,
+        onBack = { section = SettingsSection.Root },
+        modifier = Modifier.fillMaxSize(),
+      )
       SettingsSection.About -> AboutSection(
         appState = appState,
         onBack = { section = SettingsSection.Root },
@@ -156,6 +167,7 @@ private fun SettingsRoot(
   onOpenBasic: () -> Unit,
   onOpenSync: () -> Unit,
   onOpenPlatform: () -> Unit,
+  onOpenPlatformLogin: () -> Unit,
   onOpenAbout: () -> Unit,
   modifier: Modifier = Modifier,
 ) {
@@ -173,6 +185,12 @@ private fun SettingsRoot(
       title = "平台设置",
       subtitle = "平台启用开关与切换栏排序",
       onClick = onOpenPlatform,
+    )
+    SettingsItemRow(
+      icon = { Icon(imageVector = Icons.Default.AccountCircle, contentDescription = null) },
+      title = "平台登录",
+      subtitle = "B站账号二维码 / 密码登录",
+      onClick = onOpenPlatformLogin,
     )
     SettingsItemRow(
       icon = { Icon(imageVector = Icons.Default.Devices, contentDescription = null) },
@@ -196,15 +214,125 @@ private fun SettingsRoot(
 }
 
 /**
+ * 平台登录：集中管理需要登录的平台（当前仅 B站）。
+ * 点击平台卡片弹出登录弹窗（二维码 / 账号密码两种方式），
+ * 登录态保存在仓库 Cookie 中，升级重装后仍保留。
+ */
+@Composable
+private fun PlatformLoginSection(
+  appState: AppState,
+  onBack: () -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  var loggedIn by remember { mutableStateOf(false) }
+  var checking by remember { mutableStateOf(true) }
+  var showLoginSheet by remember { mutableStateOf(false) }
+  val scope = rememberCoroutineScope()
+
+  // 进页/弹窗关闭后刷新登录状态
+  LaunchedEffect(showLoginSheet) {
+    checking = true
+    loggedIn = runCatching { appState.repo.getBilibiliCookie() }
+      .getOrNull()?.contains("sessdata=", ignoreCase = true) == true
+    checking = false
+  }
+
+  Column(
+    modifier = modifier
+      .verticalScroll(rememberScrollState())
+      .padding(horizontal = 18.dp, vertical = 6.dp),
+    verticalArrangement = Arrangement.spacedBy(10.dp),
+  ) {
+    SettingsSectionHeader(title = "平台登录", onBack = onBack)
+
+    Surface(
+      onClick = { showLoginSheet = true },
+      modifier = Modifier.fillMaxWidth(),
+      shape = RoundedCornerShape(14.dp),
+      color = MaterialTheme.colorScheme.surface,
+      border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f)),
+      tonalElevation = 0.dp,
+      shadowElevation = 0.dp,
+    ) {
+      Row(
+        modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+      ) {
+        Icon(
+          imageVector = Icons.Default.AccountCircle,
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.primary,
+        )
+        Column(modifier = Modifier.weight(1f)) {
+          Text(
+            text = "哔哩哔哩",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Black),
+            color = MaterialTheme.colorScheme.onSurface,
+          )
+          Text(
+            text = when {
+              checking -> "检查登录状态…"
+              loggedIn -> "已登录 · 点击可重新登录"
+              else -> "未登录 · 点击扫码或密码登录"
+            },
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+          )
+        }
+        if (checking) {
+          CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+        }
+      }
+    }
+
+    if (loggedIn) {
+      OutlinedButton(
+        onClick = {
+          scope.launch {
+            runCatching { appState.repo.clearBilibiliCookie() }
+            loggedIn = false
+          }
+        },
+        modifier = Modifier.fillMaxWidth(),
+      ) {
+        Text(text = "退出登录", color = MaterialTheme.colorScheme.error)
+      }
+    }
+
+    // 悬浮底栏（毛玻璃浮岛）叠在内容之上，滚动内容底部预留出浮岛高度
+    Spacer(
+      modifier = Modifier.height(
+        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + DockContentClearance,
+      ),
+    )
+  }
+
+  if (showLoginSheet) {
+    BilibiliWebLoginSheet(
+      appState = appState,
+      onDismissRequest = { showLoginSheet = false },
+      onCookieCaptured = { cookieHeader ->
+        scope.launch {
+          runCatching { appState.repo.mergeBilibiliCookie(cookieHeader) }
+          loggedIn = runCatching { appState.repo.getBilibiliCookie() }
+            .getOrNull()?.contains("sessdata=", ignoreCase = true) == true
+        }
+      },
+    )
+  }
+}
+
+/**
  * 上一次发布的版本号与更新内容（「关于」页展示用）。
  * ⚠️ 每次发新版时手动同步更新：把旧值换成「这次发版前的版本」，
  * 当前版本则由 UpdateManager 动态读取，无需维护。
  */
-private const val LAST_RELEASE_VERSION = "0.1.23"
+private const val LAST_RELEASE_VERSION = "0.1.24"
 private val LAST_RELEASE_NOTES = listOf(
-  "竖屏进直播间弹幕面板底部避让毛玻璃底栏，最新弹幕不再被遮挡",
-  "平台首页顶栏重构：移除订阅功能，新增板块下拉菜单，具体分类平铺展示并全局高亮",
-  "四个平台首页抽出共用 UI 组件 PlatformHomeContent，界面调整一处生效全平台",
+  "平台页搜索框就地输入、下拉直出搜索结果，关注/取关不用再进直播间",
+  "直播间卡片左上角新增关注徽标，首页卡片也可直接取关",
+  "板块下拉按钮显示当前板块名；更新下载新增「停止下载」并清理安装包缓存",
 ).joinToString("\n") { "· $it" }
 
 @Composable

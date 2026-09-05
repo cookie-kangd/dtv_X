@@ -9,10 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -22,7 +20,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import dtv.mobile.model.Streamer
 import dtv.mobile.state.AppState
 import dtv.mobile.ui.components.NetworkImage
+import dtv.mobile.ui.components.RoundedDropdownMenu
 import dtv.mobile.util.formatViewerCountWanIfNeeded
 import dtv.mobile.util.normalizeHttpUrl
 import kotlinx.coroutines.delay
@@ -141,116 +139,114 @@ fun PlatformInlineSearch(
       }
     }
 
-    DropdownMenu(
+    RoundedDropdownMenu(
       expanded = query.trim().isNotEmpty(),
       onDismissRequest = { closePanel() },
-      modifier = Modifier
-        .width(320.dp)
-        .heightIn(max = 420.dp),
+      offsetY = 50.dp,
+      width = 320.dp,
+      maxHeight = 420.dp,
     ) {
-      Column(modifier = Modifier.padding(vertical = 4.dp)) {
-        when {
-          searching -> {
+      when {
+        searching -> {
+          Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+          ) {
+            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+            Text(
+              text = "搜索中…",
+              style = MaterialTheme.typography.bodyMedium,
+              color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+            )
+          }
+        }
+        results.isEmpty() -> {
+          Text(
+            text = "没有找到相关直播间",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+          )
+        }
+        else -> {
+          // 面板内最多展示 20 条，点击结果直接进直播间并收起面板
+          results.take(20).forEach { streamer ->
+            val followed = appState.isFollowed(streamer)
             Row(
-              modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+              modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                  closePanel()
+                  appState.openPlayer(streamer)
+                }
+                .padding(horizontal = 12.dp, vertical = 6.dp),
               verticalAlignment = Alignment.CenterVertically,
               horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-              CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-              Text(
-                text = "搜索中…",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-              )
-            }
-          }
-          results.isEmpty() -> {
-            Text(
-              text = "没有找到相关直播间",
-              style = MaterialTheme.typography.bodyMedium,
-              color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-              modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-            )
-          }
-          else -> {
-            // 面板内最多展示 20 条，点击结果直接进直播间并收起面板
-            results.take(20).forEach { streamer ->
-              val followed = appState.isFollowed(streamer)
-              Row(
+              val cover = normalizeHttpUrl(streamer.coverUrl) ?: normalizeHttpUrl(streamer.avatarUrl)
+              Box(
                 modifier = Modifier
-                  .fillMaxWidth()
-                  .clickable {
-                    closePanel()
-                    appState.openPlayer(streamer)
-                  }
-                  .padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                  .size(width = 72.dp, height = 44.dp)
+                  .clip(RoundedCornerShape(8.dp))
+                  .background(MaterialTheme.colorScheme.secondary),
+                contentAlignment = Alignment.Center,
               ) {
-                val cover = normalizeHttpUrl(streamer.coverUrl) ?: normalizeHttpUrl(streamer.avatarUrl)
-                Box(
-                  modifier = Modifier
-                    .size(width = 72.dp, height = 44.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.secondary),
-                  contentAlignment = Alignment.Center,
-                ) {
-                  if (cover != null) {
-                    NetworkImage(
-                      url = cover,
-                      contentDescription = streamer.title,
-                      modifier = Modifier.matchParentSize(),
-                    )
-                  } else {
-                    Text(
-                      text = streamer.name.take(1),
-                      style = MaterialTheme.typography.titleSmall,
-                      color = MaterialTheme.colorScheme.onSecondary,
-                    )
-                  }
-                }
-
-                Column(modifier = Modifier.weight(1f)) {
+                if (cover != null) {
+                  NetworkImage(
+                    url = cover,
+                    contentDescription = streamer.title,
+                    modifier = Modifier.matchParentSize(),
+                  )
+                } else {
                   Text(
-                    text = streamer.title,
-                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.92f),
+                    text = streamer.name.take(1),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSecondary,
+                  )
+                }
+              }
+
+              Column(modifier = Modifier.weight(1f)) {
+                Text(
+                  text = streamer.title,
+                  style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.92f),
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis,
+                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                  Text(
+                    text = streamer.name,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
                   )
-                  Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                  val viewer = streamer.viewerText.takeIf { it.isNotBlank() }
+                    ?.let(::formatViewerCountWanIfNeeded)
+                  if (viewer != null) {
                     Text(
-                      text = streamer.name,
+                      text = viewer,
                       style = MaterialTheme.typography.labelSmall,
-                      color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                      color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
                       maxLines = 1,
-                      overflow = TextOverflow.Ellipsis,
-                      modifier = Modifier.weight(1f, fill = false),
                     )
-                    val viewer = streamer.viewerText.takeIf { it.isNotBlank() }
-                      ?.let(::formatViewerCountWanIfNeeded)
-                    if (viewer != null) {
-                      Text(
-                        text = viewer,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-                        maxLines = 1,
-                      )
-                    }
                   }
                 }
+              }
 
-                IconButton(onClick = { appState.toggleFollow(streamer) }) {
-                  Icon(
-                    imageVector = if (followed) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = if (followed) "取消关注" else "关注",
-                    tint = if (followed) {
-                      MaterialTheme.colorScheme.primary
-                    } else {
-                      MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
-                    },
-                  )
-                }
+              IconButton(onClick = { appState.toggleFollow(streamer) }) {
+                Icon(
+                  imageVector = if (followed) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                  contentDescription = if (followed) "取消关注" else "关注",
+                  tint = if (followed) {
+                    MaterialTheme.colorScheme.primary
+                  } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                  },
+                )
               }
             }
           }

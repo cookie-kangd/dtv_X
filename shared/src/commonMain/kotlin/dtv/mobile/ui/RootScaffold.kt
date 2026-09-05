@@ -7,23 +7,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
@@ -44,7 +40,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import dtv.mobile.model.Platform
 import dtv.mobile.state.CategoryMenuState
 import dtv.mobile.state.AppState
 import dtv.mobile.state.Screen
@@ -63,7 +58,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
-import dtv.mobile.ui.components.BilibiliWebLoginSheet
+import dtv.mobile.ui.components.RoundedDropdownMenu
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.haze
 import kotlinx.coroutines.launch
@@ -73,8 +68,6 @@ import kotlinx.coroutines.launch
 fun RootScaffold(appState: AppState) {
   PlatformBackHandler(enabled = appState.currentScreen != Screen.Home) { appState.back() }
 
-  var showBilibiliLoginSheet by remember { mutableStateOf(false) }
-  var bilibiliLoggedIn by remember { mutableStateOf(false) }
   val scope = rememberCoroutineScope()
 
   var homeRefreshing by remember { mutableStateOf(false) }
@@ -98,25 +91,6 @@ fun RootScaffold(appState: AppState) {
     }
   }
 
-  LaunchedEffect(appState.currentScreen, appState.selectedPlatform) {
-    if (appState.currentScreen != Screen.Platform) return@LaunchedEffect
-    if (appState.selectedPlatform != Platform.Bilibili) return@LaunchedEffect
-    bilibiliLoggedIn = !runCatching { appState.repo.getBilibiliCookie() }.getOrNull().isNullOrBlank()
-  }
-
-  if (showBilibiliLoginSheet) {
-    BilibiliWebLoginSheet(
-      appState = appState,
-      onDismissRequest = { showBilibiliLoginSheet = false },
-      onCookieCaptured = { cookieHeader ->
-        scope.launch {
-          appState.repo.mergeBilibiliCookie(cookieHeader)
-          bilibiliLoggedIn = !appState.repo.getBilibiliCookie().isNullOrBlank()
-        }
-      },
-    )
-  }
-
   Scaffold(
     modifier = Modifier.fillMaxSize(),
     contentWindowInsets = if (appState.currentScreen == Screen.Player) WindowInsets(0) else ScaffoldDefaults.contentWindowInsets,
@@ -133,15 +107,6 @@ fun RootScaffold(appState: AppState) {
             title = if (appState.currentScreen == Screen.Home) "关注列表" else appState.selectedPlatform.title,
             appState = appState,
             categoryMenu = appState.categoryMenu,
-            showBilibiliLogin = appState.currentScreen == Screen.Platform && appState.selectedPlatform == Platform.Bilibili,
-            bilibiliLoggedIn = bilibiliLoggedIn,
-            onBilibiliLoginClick = { showBilibiliLoginSheet = true },
-            onBilibiliLogoutClick = {
-              scope.launch {
-                appState.repo.clearBilibiliCookie()
-                bilibiliLoggedIn = false
-              }
-            },
             showSearch = appState.currentScreen != Screen.Home,
             showPlatformActions = appState.currentScreen == Screen.Platform,
             showSettings = appState.currentScreen == Screen.Home,
@@ -221,10 +186,6 @@ private fun HubTopBar(
   title: String,
   appState: AppState,
   categoryMenu: CategoryMenuState?,
-  showBilibiliLogin: Boolean,
-  bilibiliLoggedIn: Boolean,
-  onBilibiliLoginClick: () -> Unit,
-  onBilibiliLogoutClick: () -> Unit,
   showSearch: Boolean,
   showPlatformActions: Boolean,
   showSettings: Boolean,
@@ -267,76 +228,73 @@ private fun HubTopBar(
       }
 
       // 数据同步与主题模式入口已迁移到「设置」页；
-      // 顶栏保留平台页专属操作：B站登录 + 板块下拉菜单（原第二列一级分区）。
+      // 顶栏保留平台页专属操作：板块下拉菜单（原第二列一级分区）。
+      // B站登录入口已迁移到「设置 → 平台登录」，四平台顶栏因此完全一致。
       if (showPlatformActions) {
-        if (showBilibiliLogin) {
-          IconButton(
-            onClick = if (bilibiliLoggedIn) onBilibiliLogoutClick else onBilibiliLoginClick,
-          ) {
-            Icon(
-              imageVector = if (bilibiliLoggedIn) Icons.AutoMirrored.Filled.Logout else Icons.Default.AccountCircle,
-              contentDescription = if (bilibiliLoggedIn) "退出登录" else "登录",
-              tint = if (bilibiliLoggedIn) {
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
-              } else {
-                MaterialTheme.colorScheme.primary
-              },
-            )
-          }
-        }
         if (categoryMenu != null) {
           Box {
-            // 按钮上直接显示当前选中的板块名 + 下拉图标
+            // 与搜索框同规格（高 44dp 胶囊），背景始终为全局高亮色
             val menu = categoryMenu
             val currentSection = menu.options.getOrNull(menu.selectedIndex).takeIf { menu.selectedIndex >= 0 }
             Surface(
               onClick = { categoryMenuExpanded = !categoryMenuExpanded },
+              modifier = Modifier.height(44.dp),
               shape = RoundedCornerShape(999.dp),
-              color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+              color = MaterialTheme.colorScheme.primary,
               tonalElevation = 0.dp,
               shadowElevation = 0.dp,
-              border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
             ) {
               Row(
-                modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                modifier = Modifier.padding(start = 14.dp, end = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalArrangement = Arrangement.spacedBy(0.dp),
               ) {
                 Text(
                   text = currentSection ?: "板块",
                   style = MaterialTheme.typography.labelLarge,
-                  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                  color = MaterialTheme.colorScheme.onPrimary,
+                  fontWeight = FontWeight.Bold,
                   maxLines = 1,
                 )
                 Icon(
                   imageVector = Icons.Default.ArrowDropDown,
                   contentDescription = "选择板块",
-                  tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-                  modifier = Modifier.size(20.dp),
+                  tint = MaterialTheme.colorScheme.onPrimary,
+                  modifier = Modifier.size(22.dp),
                 )
               }
             }
-            DropdownMenu(
+            RoundedDropdownMenu(
               expanded = categoryMenuExpanded,
               onDismissRequest = { categoryMenuExpanded = false },
+              offsetY = 50.dp,
+              width = 180.dp,
             ) {
               menu?.options?.forEachIndexed { index, option ->
-                DropdownMenuItem(
-                  text = {
-                    Text(
-                      text = option,
-                      color = if (index == menu.selectedIndex) {
-                        MaterialTheme.colorScheme.primary
-                      } else {
-                        MaterialTheme.colorScheme.onSurface
-                      },
-                    )
-                  },
-                  onClick = {
-                    categoryMenuExpanded = false
-                    menu.onSelect(index)
-                  },
-                )
+                val selected = index == menu.selectedIndex
+                Row(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable {
+                      categoryMenuExpanded = false
+                      menu.onSelect(index)
+                    }
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                  verticalAlignment = Alignment.CenterVertically,
+                ) {
+                  Text(
+                    text = option,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (selected) FontWeight.Black else FontWeight.Normal,
+                    color = if (selected) {
+                      MaterialTheme.colorScheme.primary
+                    } else {
+                      MaterialTheme.colorScheme.onSurface
+                    },
+                    maxLines = 1,
+                  )
+                }
               }
             }
           }

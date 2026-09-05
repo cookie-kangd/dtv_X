@@ -128,21 +128,23 @@ fun StreamerCard(
             ),
         )
 
+        // 右上角人气徽标与左上角关注徽标：同高(24dp)、同内边距、同圆角，视觉上下对齐
+        val badgeHeight = 24.dp
         if (streamer.viewerText.isNotBlank()) {
           Surface(
             modifier = Modifier
               .align(Alignment.TopEnd)
-              .padding(metrics.badgeInsetPadding),
+              .padding(metrics.badgeInsetPadding)
+              .height(badgeHeight),
             shape = RoundedCornerShape(metrics.badgeCorner),
             color = Color.Black.copy(alpha = 0.40f),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
             tonalElevation = 0.dp,
             shadowElevation = 0.dp,
           ) {
             Row(
-              modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+              modifier = Modifier.padding(horizontal = 8.dp),
               verticalAlignment = Alignment.CenterVertically,
-              horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
               Text(
                 text = formatViewerCountWanIfNeeded(streamer.viewerText),
@@ -161,19 +163,22 @@ fun StreamerCard(
             onClick = onToggleFollow,
             modifier = Modifier
               .align(Alignment.TopStart)
-              .padding(metrics.badgeInsetPadding),
-            shape = CircleShape,
+              .padding(metrics.badgeInsetPadding)
+              .size(badgeHeight),
+            shape = RoundedCornerShape(metrics.badgeCorner),
             color = Color.Black.copy(alpha = 0.40f),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
             tonalElevation = 0.dp,
             shadowElevation = 0.dp,
           ) {
-            Icon(
-              imageVector = if (followed) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-              contentDescription = if (followed) "取消关注" else "关注",
-              tint = if (followed) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.9f),
-              modifier = Modifier.padding(6.dp).size(14.dp),
-            )
+            Box(contentAlignment = Alignment.Center) {
+              Icon(
+                imageVector = if (followed) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                contentDescription = if (followed) "取消关注" else "关注",
+                tint = if (followed) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.9f),
+                modifier = Modifier.size(14.dp),
+              )
+            }
           }
         }
       }
